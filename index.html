@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教員タスク管理</title>
+
+<style>
+body{
+    font-family: sans-serif;
+    margin:0;
+    background:#f5f7fa;
+}
+
+header{
+    background:#2563eb;
+    color:white;
+    text-align:center;
+    padding:15px;
+    font-size:24px;
+    font-weight:bold;
+}
+
+.container{
+    padding:15px;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:15px;
+    margin-bottom:15px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+input, select, textarea{
+    width:100%;
+    padding:10px;
+    margin-top:5px;
+    margin-bottom:10px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    box-sizing:border-box;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:10px;
+    background:#2563eb;
+    color:white;
+    font-size:16px;
+}
+
+.task{
+    background:white;
+    margin-bottom:10px;
+    border-radius:10px;
+    padding:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.task-left{
+    flex:1;
+}
+
+.small{
+    font-size:12px;
+    color:#666;
+}
+
+.done{
+    text-decoration:line-through;
+    opacity:0.5;
+}
+
+.delete-btn{
+    background:red;
+    color:white;
+    border:none;
+    padding:5px 10px;
+    border-radius:6px;
+    width:auto;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+📚 教員タスク管理
+</header>
+
+<div class="container">
+
+<div class="card">
+<h3>タスク追加</h3>
+
+<input id="title" placeholder="タスク名">
+
+<select id="category">
+<option>学級経営</option>
+<option>授業準備</option>
+<option>校務分掌</option>
+<option>生徒指導</option>
+<option>保護者対応</option>
+<option>研修</option>
+<option>日本人学校</option>
+<option>その他</option>
+</select>
+
+<input type="date" id="deadline">
+
+<select id="priority">
+<option>高</option>
+<option>中</option>
+<option>低</option>
+</select>
+
+<textarea id="memo" rows="3" placeholder="メモ"></textarea>
+
+<button onclick="addTask()">追加</button>
+</div>
+
+<div class="card">
+<h3>今日のタスク</h3>
+<div id="taskList"></div>
+</div>
+
+</div>
+
+<script>
+
+let tasks = JSON.parse(localStorage.getItem("teacherTasks")) || [];
+
+function saveTasks(){
+    localStorage.setItem(
+        "teacherTasks",
+        JSON.stringify(tasks)
+    );
+}
+
+function addTask(){
+
+    const title =
+        document.getElementById("title").value;
+
+    if(title===""){
+        alert("タスク名を入力してください");
+        return;
+    }
+
+    tasks.push({
+        title:title,
+        category:
+        document.getElementById("category").value,
+        deadline:
+        document.getElementById("deadline").value,
+        priority:
+        document.getElementById("priority").value,
+        memo:
+        document.getElementById("memo").value,
+        done:false
+    });
+
+    saveTasks();
+    renderTasks();
+
+    document.getElementById("title").value="";
+    document.getElementById("memo").value="";
+}
+
+function toggleTask(index){
+    tasks[index].done =
+    !tasks[index].done;
+
+    saveTasks();
+    renderTasks();
+}
+
+function deleteTask(index){
+
+    if(confirm("削除しますか？")){
+        tasks.splice(index,1);
+        saveTasks();
+        renderTasks();
+    }
+}
+
+function renderTasks(){
+
+    const list =
+    document.getElementById("taskList");
+
+    list.innerHTML="";
+
+    tasks.forEach((task,index)=>{
+
+        const div =
+        document.createElement("div");
+
+        div.className="task";
+
+        div.innerHTML=`
+        <div class="task-left ${task.done ? 'done':''}">
+            <strong>${task.title}</strong><br>
+            <span class="small">
+            ${task.category}
+            ｜締切:${task.deadline || '未設定'}
+            ｜優先度:${task.priority}
+            </span><br>
+            <span class="small">${task.memo}</span>
+        </div>
+
+        <div>
+            <input
+            type="checkbox"
+            ${task.done ? 'checked':''}
+            onchange="toggleTask(${index})">
+
+            <button
+            class="delete-btn"
+            onclick="deleteTask(${index})">
+            削除
+            </button>
+        </div>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
+renderTasks();
+
+</script>
+
+</body>
+</html>
