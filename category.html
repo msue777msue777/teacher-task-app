@@ -25,28 +25,6 @@ header{
     padding:15px;
 }
 
-.category-card{
-    background:white;
-    border-radius:10px;
-    padding:12px;
-    margin-bottom:12px;
-    border:2px solid #cbd5e1; /* 淡いボーダー */
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.category-name{
-    font-size:16px;
-    color:#475569; /* gray-600 */
-}
-
-.handle{
-    font-size:20px;
-    color:#cbd5e1; /* gray-300 */
-    cursor:grab;
-}
-
 .add-btn{
     background:#2563eb;
     color:white;
@@ -54,6 +32,31 @@ header{
     border-radius:8px;
     border:none;
     font-size:14px;
+    margin-bottom:15px;
+}
+
+.category-card{
+    background:white;
+    border-radius:10px;
+    padding:12px;
+    margin-bottom:12px;
+    border:2px solid #cbd5e1;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.category-name{
+    font-size:16px;
+    color:#475569;
+}
+
+.delete-btn{
+    background:#ef4444;
+    color:white;
+    border:none;
+    padding:5px 10px;
+    border-radius:6px;
 }
 </style>
 </head>
@@ -64,23 +67,32 @@ header{
 
 <div class="container">
 
-    <button class="add-btn" onclick="openAddModal()">＋カテゴリ追加</button>
+    <button class="add-btn" onclick="addCategory()">＋カテゴリ追加</button>
 
     <div id="categoryList"></div>
 
 </div>
 
 <script>
-let categories = JSON.parse(localStorage.getItem("teacherCategories")) || [
-    "学級経営","授業準備","校務分掌","生徒指導","保護者対応","研修","日本人学校","その他"
-];
-
-function saveCategories(){
-    localStorage.setItem("teacherCategories", JSON.stringify(categories));
+// 初期カテゴリがなければ作成
+if(!localStorage.getItem("teacherCategories")){
+    localStorage.setItem("teacherCategories", JSON.stringify([
+        "学級経営",
+        "授業準備",
+        "校務分掌",
+        "生徒指導",
+        "保護者対応",
+        "研修",
+        "日本人学校",
+        "その他"
+    ]));
 }
 
+// カテゴリ一覧を表示
 function renderCategories(){
     const list = document.getElementById("categoryList");
+    const categories = JSON.parse(localStorage.getItem("teacherCategories")) || [];
+
     list.innerHTML = "";
 
     categories.forEach((c, index)=>{
@@ -89,11 +101,34 @@ function renderCategories(){
 
         div.innerHTML = `
             <span class="category-name">${c}</span>
-            <span class="handle">≡</span>
+            <button class="delete-btn" onclick="deleteCategory(${index})">削除</button>
         `;
 
         list.appendChild(div);
     });
+}
+
+// カテゴリ追加
+function addCategory(){
+    const name = prompt("新しいカテゴリ名を入力してください");
+    if(!name || name.trim() === "") return;
+
+    const categories = JSON.parse(localStorage.getItem("teacherCategories")) || [];
+    categories.push(name.trim());
+
+    localStorage.setItem("teacherCategories", JSON.stringify(categories));
+    renderCategories();
+}
+
+// カテゴリ削除
+function deleteCategory(index){
+    if(!confirm("削除しますか？")) return;
+
+    const categories = JSON.parse(localStorage.getItem("teacherCategories")) || [];
+    categories.splice(index, 1);
+
+    localStorage.setItem("teacherCategories", JSON.stringify(categories));
+    renderCategories();
 }
 
 renderCategories();
