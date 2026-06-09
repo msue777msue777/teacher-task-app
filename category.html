@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>カテゴリ編集</title>
+
+<style>
+body{
+    font-family:sans-serif;
+    margin:0;
+    background:#f5f7fa;
+}
+
+header{
+    background:#2563eb;
+    color:white;
+    text-align:center;
+    padding:15px;
+    font-size:20px;
+    font-weight:bold;
+}
+
+.container{
+    padding:15px;
+}
+
+.category-card{
+    background:white;
+    border-radius:10px;
+    padding:12px;
+    margin-bottom:12px;
+    border:2px solid #cbd5e1; /* 淡いボーダー */
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.category-name{
+    font-size:16px;
+    color:#475569; /* gray-600 */
+}
+
+.handle{
+    font-size:20px;
+    color:#cbd5e1; /* gray-300 */
+    cursor:grab;
+}
+
+.add-btn{
+    background:#2563eb;
+    color:white;
+    padding:10px 15px;
+    border-radius:8px;
+    border:none;
+    font-size:14px;
+}
+</style>
+</head>
+
+<body>
+
+<header>カテゴリ編集</header>
+
+<div class="container">
+
+    <button class="add-btn" onclick="openAddModal()">＋カテゴリ追加</button>
+
+    <div id="categoryList"></div>
+
+</div>
+
+<script>
+let categories = JSON.parse(localStorage.getItem("teacherCategories")) || [
+    "学級経営","授業準備","校務分掌","生徒指導","保護者対応","研修","日本人学校","その他"
+];
+
+function saveCategories(){
+    localStorage.setItem("teacherCategories", JSON.stringify(categories));
+}
+
+function renderCategories(){
+    const list = document.getElementById("categoryList");
+    list.innerHTML = "";
+
+    categories.forEach((c, index)=>{
+        const div = document.createElement("div");
+        div.className = "category-card";
+
+        div.innerHTML = `
+            <span class="category-name">${c}</span>
+            <span class="handle">≡</span>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
+renderCategories();
+</script>
+
+</body>
+</html>
