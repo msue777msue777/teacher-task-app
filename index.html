@@ -101,16 +101,24 @@ button{
 
 <input id="title" placeholder="タスク名">
 
-<select id="category">
-<option>学級経営</option>
-<option>授業準備</option>
-<option>校務分掌</option>
-<option>生徒指導</option>
-<option>保護者対応</option>
-<option>研修</option>
-<option>日本人学校</option>
-<option>その他</option>
-</select>
+<select id="category"></select>
+
+<script>
+function loadCategories(){
+    const select = document.getElementById("category");
+    const categories = JSON.parse(localStorage.getItem("teacherCategories")) || [];
+
+    select.innerHTML = "";
+    categories.forEach(c=>{
+        const opt = document.createElement("option");
+        opt.textContent = c;
+        select.appendChild(opt);
+    });
+}
+
+loadCategories();
+</script>
+
 
 <input type="date" id="deadline">
 
