@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>教員タスク管理</title>
+<title>教員タスク管理 (Cloud Sync)</title>
+
+<!-- Supabase ライブラリの読み込み -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 body{
@@ -91,36 +94,57 @@ button:hover{
     border-radius:6px;
     width:auto;
 }
+
+.loading-text {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
 </style>
 </head>
 
 <body>
 
 <header>
-📚 教員タスク管理
+📚 教員タスク管理 (同期中)
 </header>
 
 <div class="container">
 
 <div class="card">
 <h3>タスク追加</h3>
-
 <input id="title" placeholder="タスク名">
-
 <select id="category"></select>
+<input type="date" id="deadline">
+<select id="priority">
+<option>高</option>
+<option>中</option>
+<option>低</option>
+</select>
+<textarea id="memo" rows="3" placeholder="メモ"></textarea>
+<button id="addBtn" onclick="addTask()">追加</button>
+</div>
+
+<a href="category.html" style="color:#2563eb; font-size:14px; text-decoration:none;">⚙ カテゴリ編集へ</a>
+
+<div class="card" style="margin-top:10px;">
+<h3>全端末共通タスクリスト</h3>
+<div id="taskList"><p class="loading-text">データを読み込み中...</p></div>
+</div>
+
+</div>
 
 <script>
+// --- Supabase 設定 ---
+const SUPABASE_URL = "https://klewsfgafeixuvghkkvi.supabase.co"; // 末尾の/rest/v1/は削除して使います
+const SUPABASE_KEY = "sb_publishable_pexunuSRbbG_3GgfTUovTA_i7iwAHG0";
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let tasks = [];
+
+// --- カテゴリ読み込み (LocalStorageを使用) ---
 if(!localStorage.getItem("teacherCategories")){
-    localStorage.setItem("teacherCategories", JSON.stringify([
-        "学級経営",
-        "授業準備",
-        "校務分掌",
-        "生徒指導",
-        "保護者対応",
-        "研修",
-        "日本人学校",
-        "その他"
-    ]));
+    localStorage.setItem("teacherCategories", JSON.stringify(["学級経営","授業準備","校務分掌","生徒指導","保護者対応","研修","日本人学校","その他"]));
 }
 
 function loadCategories(){
@@ -134,99 +158,112 @@ function loadCategories(){
     });
 }
 loadCategories();
-</script>
 
-<input type="date" id="deadline">
+// --- タスク取得 (Supabaseから) ---
+async function fetchTasks() {
+    const { data, error } = await _supabase
+        .from('tasks')
+        .select('*');
 
-<select id="priority">
-<option>高</option>
-<option>中</option>
-<option>低</option>
-</select>
+    if (error) {
+        console.error("データ取得エラー:", error);
+        document.getElementById("taskList").innerHTML = "エラーが発生しました";
+        return;
+    }
 
-<textarea id="memo" rows="3" placeholder="メモ"></textarea>
-
-<button onclick="addTask()">追加</button>
-</div>
-
-<a href="category.html" style="color:#2563eb; font-size:14px; text-decoration:none;">⚙ カテゴリ編集へ</a>
-
-<div class="card" style="margin-top:10px;">
-<h3>期限順のタスク</h3>
-<div id="taskList"></div>
-</div>
-
-</div>
-
-<script>
-
-let tasks = JSON.parse(localStorage.getItem("teacherTasks")) || [];
-
-function saveTasks(){
-    localStorage.setItem("teacherTasks", JSON.stringify(tasks));
+    tasks = data;
+    renderTasks();
 }
 
-function addTask(){
-    const title = document.getElementById("title").value;
+// --- タスク追加 (Supabaseへ) ---
+async function addTask(){
+    const titleInput = document.getElementById("title");
+    const title = titleInput.value;
     const deadline = document.getElementById("deadline").value;
+    const btn = document.getElementById("addBtn");
 
-    if(title===""){
+    if(title === ""){
         alert("タスク名を入力してください");
         return;
     }
 
-    tasks.push({
+    btn.disabled = true;
+    btn.innerText = "送信中...";
+
+    const newTask = {
         title: title,
         category: document.getElementById("category").value,
-        deadline: deadline,
+        deadline: deadline || null,
         priority: document.getElementById("priority").value,
         memo: document.getElementById("memo").value,
         done: false
-    });
+    };
 
-    saveTasks();
-    renderTasks();
+    const { error } = await _supabase.from('tasks').insert([newTask]);
 
-    // 入力欄をリセット
-    document.getElementById("title").value="";
-    document.getElementById("deadline").value="";
-    document.getElementById("memo").value="";
+    if (error) {
+        alert("追加に失敗しました: " + error.message);
+    } else {
+        titleInput.value = "";
+        document.getElementById("memo").value = "";
+        await fetchTasks(); // データを再取得して表示更新
+    }
+
+    btn.disabled = false;
+    btn.innerText = "追加";
 }
 
-function toggleTask(index){
-    tasks[index].done = !tasks[index].done;
-    saveTasks();
-    renderTasks();
-}
+// --- 完了状態の切り替え ---
+async function toggleTask(id, currentStatus){
+    const { error } = await _supabase
+        .from('tasks')
+        .update({ done: !currentStatus })
+        .eq('id', id);
 
-function deleteTask(index){
-    if(confirm("削除しますか？")){
-        tasks.splice(index,1);
-        saveTasks();
-        renderTasks();
+    if (error) {
+        alert("更新に失敗しました");
+    } else {
+        await fetchTasks();
     }
 }
 
+// --- タスク削除 ---
+async function deleteTask(id){
+    if(confirm("削除しますか？")){
+        const { error } = await _supabase
+            .from('tasks')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            alert("削除に失敗しました");
+        } else {
+            await fetchTasks();
+        }
+    }
+}
+
+// --- 画面表示 ---
 function renderTasks(){
     const list = document.getElementById("taskList");
-    list.innerHTML="";
+    list.innerHTML = "";
 
-    // ★ 日時順に並び替える（ソート）
-    tasks.sort((a, b) => {
-        // 締切がない場合は一番下に送る
+    if (tasks.length === 0) {
+        list.innerHTML = "<p class='loading-text'>タスクはありません</p>";
+        return;
+    }
+
+    // 日時順に並び替え
+    const sortedTasks = [...tasks].sort((a, b) => {
         if (!a.deadline) return 1;
         if (!b.deadline) return -1;
-        // 日付を比較
         return new Date(a.deadline) - new Date(b.deadline);
     });
 
-    // ソートした後に保存（インデックスの整合性を保つため）
-    saveTasks();
-
-    tasks.forEach((task,index)=>{
+    sortedTasks.forEach((task)=>{
         const div = document.createElement("div");
-        div.className="task";
-        div.innerHTML=`
+        div.className = "task";
+        div.innerHTML = `
         <div class="task-left ${task.done ? 'done':''}">
             <strong>${task.title}</strong><br>
             <span class="small">
@@ -234,16 +271,16 @@ function renderTasks(){
             ｜締切:${task.deadline || '未設定'}
             ｜優先度:${task.priority}
             </span><br>
-            <span class="small">${task.memo}</span>
+            <span class="small">${task.memo || ''}</span>
         </div>
         <div>
             <input
             type="checkbox"
             ${task.done ? 'checked':''}
-            onchange="toggleTask(${index})">
+            onchange="toggleTask(${task.id}, ${task.done})">
             <button
             class="delete-btn"
-            onclick="deleteTask(${index})">
+            onclick="deleteTask(${task.id})">
             削除
             </button>
         </div>
@@ -252,8 +289,8 @@ function renderTasks(){
     });
 }
 
-// 初回表示
-renderTasks();
+// 初回起動時の読み込み
+fetchTasks();
 
 </script>
 </body>
