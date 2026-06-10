@@ -51,6 +51,11 @@ button{
     background:#2563eb;
     color:white;
     font-size:16px;
+    cursor: pointer;
+}
+
+button:hover{
+    background:#1d4ed8;
 }
 
 .task{
@@ -61,6 +66,7 @@ button{
     display:flex;
     justify-content:space-between;
     align-items:center;
+    border-left: 5px solid #2563eb;
 }
 
 .task-left{
@@ -101,11 +107,9 @@ button{
 
 <input id="title" placeholder="タスク名">
 
-<!-- ▼▼ カテゴリを localStorage から読み込む ▼▼ -->
 <select id="category"></select>
 
 <script>
-// 初期カテゴリがなければ作成
 if(!localStorage.getItem("teacherCategories")){
     localStorage.setItem("teacherCategories", JSON.stringify([
         "学級経営",
@@ -119,11 +123,9 @@ if(!localStorage.getItem("teacherCategories")){
     ]));
 }
 
-// カテゴリ読み込み
 function loadCategories(){
     const select = document.getElementById("category");
     const categories = JSON.parse(localStorage.getItem("teacherCategories")) || [];
-
     select.innerHTML = "";
     categories.forEach(c=>{
         const opt = document.createElement("option");
@@ -131,10 +133,8 @@ function loadCategories(){
         select.appendChild(opt);
     });
 }
-
 loadCategories();
 </script>
-<!-- ▲▲ ここまで ▲▲ -->
 
 <input type="date" id="deadline">
 
@@ -149,11 +149,10 @@ loadCategories();
 <button onclick="addTask()">追加</button>
 </div>
 
-<!-- ★ カテゴリ編集画面へのリンク -->
-<a href="category.html" style="color:#2563eb; font-size:14px;">カテゴリ編集へ</a>
+<a href="category.html" style="color:#2563eb; font-size:14px; text-decoration:none;">⚙ カテゴリ編集へ</a>
 
-<div class="card">
-<h3>今日のタスク</h3>
+<div class="card" style="margin-top:10px;">
+<h3>期限順のタスク</h3>
 <div id="taskList"></div>
 </div>
 
@@ -164,16 +163,12 @@ loadCategories();
 let tasks = JSON.parse(localStorage.getItem("teacherTasks")) || [];
 
 function saveTasks(){
-    localStorage.setItem(
-        "teacherTasks",
-        JSON.stringify(tasks)
-    );
+    localStorage.setItem("teacherTasks", JSON.stringify(tasks));
 }
 
 function addTask(){
-
-    const title =
-        document.getElementById("title").value;
+    const title = document.getElementById("title").value;
+    const deadline = document.getElementById("deadline").value;
 
     if(title===""){
         alert("タスク名を入力してください");
@@ -181,35 +176,30 @@ function addTask(){
     }
 
     tasks.push({
-        title:title,
-        category:
-        document.getElementById("category").value,
-        deadline:
-        document.getElementById("deadline").value,
-        priority:
-        document.getElementById("priority").value,
-        memo:
-        document.getElementById("memo").value,
-        done:false
+        title: title,
+        category: document.getElementById("category").value,
+        deadline: deadline,
+        priority: document.getElementById("priority").value,
+        memo: document.getElementById("memo").value,
+        done: false
     });
 
     saveTasks();
     renderTasks();
 
+    // 入力欄をリセット
     document.getElementById("title").value="";
+    document.getElementById("deadline").value="";
     document.getElementById("memo").value="";
 }
 
 function toggleTask(index){
-    tasks[index].done =
-    !tasks[index].done;
-
+    tasks[index].done = !tasks[index].done;
     saveTasks();
     renderTasks();
 }
 
 function deleteTask(index){
-
     if(confirm("削除しますか？")){
         tasks.splice(index,1);
         saveTasks();
@@ -218,19 +208,24 @@ function deleteTask(index){
 }
 
 function renderTasks(){
-
-    const list =
-    document.getElementById("taskList");
-
+    const list = document.getElementById("taskList");
     list.innerHTML="";
 
+    // ★ 日時順に並び替える（ソート）
+    tasks.sort((a, b) => {
+        // 締切がない場合は一番下に送る
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        // 日付を比較
+        return new Date(a.deadline) - new Date(b.deadline);
+    });
+
+    // ソートした後に保存（インデックスの整合性を保つため）
+    saveTasks();
+
     tasks.forEach((task,index)=>{
-
-        const div =
-        document.createElement("div");
-
+        const div = document.createElement("div");
         div.className="task";
-
         div.innerHTML=`
         <div class="task-left ${task.done ? 'done':''}">
             <strong>${task.title}</strong><br>
@@ -241,13 +236,11 @@ function renderTasks(){
             </span><br>
             <span class="small">${task.memo}</span>
         </div>
-
         <div>
             <input
             type="checkbox"
             ${task.done ? 'checked':''}
             onchange="toggleTask(${index})">
-
             <button
             class="delete-btn"
             onclick="deleteTask(${index})">
@@ -255,14 +248,13 @@ function renderTasks(){
             </button>
         </div>
         `;
-
         list.appendChild(div);
     });
 }
 
+// 初回表示
 renderTasks();
 
 </script>
-
 </body>
 </html>
