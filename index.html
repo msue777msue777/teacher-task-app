@@ -22,6 +22,20 @@ header{
     padding:15px;
     font-size:24px;
     font-weight:bold;
+    /* 戻るボタンを配置するために相対位置に設定 */
+    position: relative;
+}
+
+/* 戻るボタンのスタイル */
+.back-btn {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: normal;
 }
 
 .container{
@@ -106,7 +120,9 @@ button:hover{
 <body>
 
 <header>
-📚 教員タスク管理 (同期中)
+    <!-- top.htmlに戻るボタンを追加 -->
+    <a href="top.html" class="back-btn">＜ 戻る</a>
+    📚 教員タスク管理 (同期中)
 </header>
 
 <div class="container">
@@ -125,7 +141,10 @@ button:hover{
 <button id="addBtn" onclick="addTask()">追加</button>
 </div>
 
-<a href="category.html" style="color:#2563eb; font-size:14px; text-decoration:none;">⚙ カテゴリ編集へ</a>
+<!-- 設定アイコンっぽく配置 -->
+<div style="text-align: right; margin-bottom: 10px;">
+    <a href="category.html" style="color:#2563eb; font-size:14px; text-decoration:none;">⚙ カテゴリ編集へ</a>
+</div>
 
 <div class="card" style="margin-top:10px;">
 <h3>全端末共通タスクリスト</h3>
