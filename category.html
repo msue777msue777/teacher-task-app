@@ -19,6 +19,20 @@ header{
     padding:15px;
     font-size:20px;
     font-weight:bold;
+    /* 戻るボタンを配置するために相対位置に設定 */
+    position: relative;
+}
+
+/* 戻るボタンのスタイル */
+.back-btn {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: normal;
 }
 
 .container{
@@ -33,6 +47,7 @@ header{
     border:none;
     font-size:14px;
     margin-bottom:15px;
+    cursor: pointer;
 }
 
 .category-card{
@@ -57,13 +72,18 @@ header{
     border:none;
     padding:5px 10px;
     border-radius:6px;
+    cursor: pointer;
 }
 </style>
 </head>
 
 <body>
 
-<header>カテゴリ編集</header>
+<header>
+    <!-- index.htmlに戻るリンクを追加 -->
+    <a href="index.html" class="back-btn">＜ 戻る</a>
+    カテゴリ編集
+</header>
 
 <div class="container">
 
