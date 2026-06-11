@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教員校務支援ポータル</title>
+<style>
+body{
+    font-family: sans-serif;
+    margin:0;
+    background:#f5f7fa;
+}
+
+header{
+    background:#2563eb;
+    color:white;
+    text-align:center;
+    padding:20px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+header p {
+    margin: 5px 0 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.container{
+    padding:20px;
+    max-width: 600px;
+    margin: auto;
+}
+
+/* メニューグリッド */
+.menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.menu-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    text-decoration: none;
+    color: #333;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-card:active {
+    transform: scale(0.95);
+    background: #f0f4ff;
+}
+
+.icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.label {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.description {
+    font-size: 12px;
+    color: #777;
+    margin-top: 5px;
+}
+
+/* 準備中のカード */
+.coming-soon {
+    opacity: 0.6;
+    background: #e5e7eb;
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>校務支援ポータル</h1>
+    <div id="today-date"></div>
+</header>
+
+<div class="container">
+    <div class="menu-grid">
+        <!-- タスク管理へ飛ぶボタン -->
+        <a href="index.html" class="menu-card">
+            <div class="icon">📚</div>
+            <div class="label">タスク管理</div>
+            <div class="description">Todo・同期</div>
+        </a>
+
+        <!-- 今後追加予定の項目（サンプル） -->
+        <div class="menu-card coming-soon">
+            <div class="icon">📝</div>
+            <div class="label">週案・日記</div>
+            <div class="description">準備中</div>
+        </div>
+
+        <div class="menu-card coming-soon">
+            <div class="icon">📊</div>
+            <div class="label">成績入力</div>
+            <div class="description">準備中</div>
+        </div>
+
+        <div class="menu-card coming-soon">
+            <div class="icon">🏠</div>
+            <div class="label">学級経営</div>
+            <div class="description">準備中</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 今日のみをヘッダーに表示
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+    document.getElementById("today-date").innerText = dateStr;
+</script>
+
+</body>
+</html>
