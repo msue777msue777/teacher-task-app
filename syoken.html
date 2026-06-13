@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>所見作成支援アプリ（試作版）</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 15px; background-color: #f0f2f5; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { font-size: 1.2rem; text-align: center; color: #1a73e8; }
+        label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.85rem; }
+        select, input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        .radio-group { margin-top: 10px; display: flex; justify-content: space-around; background: #f8f9fa; padding: 10px; border-radius: 8px; }
+        button { width: 100%; padding: 14px; background: #1a73e8; color: white; border: none; border-radius: 8px; margin-top: 20px; cursor: pointer; font-size: 1rem; font-weight: bold; }
+        #result-area { margin-top: 20px; padding: 15px; background: #e8f0fe; border-radius: 8px; display: none; }
+        .copy-btn { background: #5f6368; margin-top: 10px; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📝 所見作成支援（試作版）</h1>
+    <label>教科：</label>
+    <select id="subject" onchange="updateUnits()">
+        <option value="算数">算数</option>
+        <option value="国語">国語</option>
+        <option value="理科">理科</option>
+        <option value="生活面">生活面</option>
+        <option value="行事">行事</option>
+    </select>
+    <label>単元名：</label>
+    <select id="unit"></select>
+    <label>視点：</label>
+    <div class="radio-group">
+        <label><input type="radio" name="persona" value="ベテラン" checked> ベテラン</label>
+        <label><input type="radio" name="persona" value="調査官"> 調査官</label>
+    </div>
+    <label>役割：</label>
+    <input type="text" id="role" placeholder="例：班長">
+    <label>具体的な様子：</label>
+    <textarea id="episode" placeholder="例：図を使って説明した。"></textarea>
+    <button onclick="generate()">所見を生成</button>
+    <div id="result-area">
+        <strong>【生成結果】</strong>
+        <p id="result-text" style="line-height:1.6;"></p>
+        <button class="copy-btn" onclick="copyText()">コピーする</button>
+    </div>
+</div>
+<script>
+    const data = [
+        { s: "算数", u: "小数のかけ算", g: "計算のきまりを適用し、積の小数点の位置を論理的に考える能力" },
+        { s: "算数", u: "分数のかけ算", g: "分数の乗法の意味を理解し、計算の仕方を説明する能力" },
+        { s: "国語", u: "帰り道", g: "人物の心情の変化を叙述に基づいて捉える能力" },
+        { s: "理科", u: "物の燃え方", g: "空気の変化を関連付け、根拠を持って推論する能力" },
+        { s: "生活面", u: "責任感", g: "自分の役割を自覚し、最後まで粘り強くやり遂げる態度" },
+        { s: "行事", u: "運動会", g: "集団の一員として協力し、目標に向かって努力する姿" }
+    ];
+    function updateUnits() {
+        const sub = document.getElementById('subject').value;
+        const unitSel = document.getElementById('unit');
+        unitSel.innerHTML = "";
+        data.filter(d => d.s === sub).forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.u; opt.textContent = d.u; unitSel.appendChild(opt);
+        });
+    }
+    function generate() {
+        const sub = document.getElementById('subject').value;
+        const unit = document.getElementById('unit').value;
+        const role = document.getElementById('role').value;
+        const epi = document.getElementById('episode').value;
+        const persona = document.querySelector('input[name="persona"]:checked').value;
+        const goal = data.find(d => d.u === unit).g;
+        const header = `${sub}科の「${unit}」の学習では、`;
+        let body = persona === "ベテラン" ? 
+            `${goal}において、意欲的な姿が見られました。${role ? role + 'として班を支え、' : ''}${epi ? epi : '真剣に考える'}ことで成長しています。` :
+            `${goal}を深く理解し、資質を発揮しました。${role ? role + 'を通じ、' : ''}${epi ? epi : '主体的に取り組む'}過程で思考を深めました。`;
+        document.getElementById('result-text').textContent = header + body;
+        document.getElementById('result-area').style.display = 'block';
+    }
+    function copyText() {
+        navigator.clipboard.writeText(document.getElementById('result-text').textContent);
+        alert("コピーしました");
+    }
+    updateUnits();
+</script>
+</body>
+</html>
