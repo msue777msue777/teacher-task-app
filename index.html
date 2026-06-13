@@ -3,129 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>教員タスク管理 (Cloud Sync)</title>
-
-<!-- Supabase ライブラリの読み込み -->
+<title>教員タスク管理 Pro</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
-body{
-    font-family: sans-serif;
-    margin:0;
-    background:#f5f7fa;
-}
-
-header{
-    background:#2563eb;
-    color:white;
-    text-align:center;
-    padding:15px;
-    font-size:24px;
-    font-weight:bold;
-    /* 戻るボタンを配置するために相対位置に設定 */
-    position: relative;
-}
-
-/* 戻るボタンのスタイル */
-.back-btn {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: white;
-    text-decoration: none;
-    font-size: 16px;
-    font-weight: normal;
-}
-
-.container{
-    padding:15px;
-}
-
-.card{
-    background:white;
-    border-radius:12px;
-    padding:15px;
-    margin-bottom:15px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.1);
-}
-
-input, select, textarea{
-    width:100%;
-    padding:10px;
-    margin-top:5px;
-    margin-bottom:10px;
-    border:1px solid #ccc;
-    border-radius:8px;
-    box-sizing:border-box;
-}
-
-button{
-    width:100%;
-    padding:12px;
-    border:none;
-    border-radius:10px;
-    background:#2563eb;
-    color:white;
-    font-size:16px;
-    cursor: pointer;
-}
-
-button:hover{
-    background:#1d4ed8;
-}
-
-.task{
-    background:white;
-    margin-bottom:10px;
-    border-radius:10px;
-    padding:10px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    border-left: 5px solid #2563eb;
-}
-
-.task-left{
-    flex:1;
-}
-
-.small{
-    font-size:12px;
-    color:#666;
-}
-
-.done{
-    text-decoration:line-through;
-    opacity:0.5;
-}
-
-.delete-btn{
-    background:red;
-    color:white;
-    border:none;
-    padding:5px 10px;
-    border-radius:6px;
-    width:auto;
-}
-
-.loading-text {
-    text-align: center;
-    color: #666;
-    font-size: 14px;
-}
+body{font-family:sans-serif;margin:0;background:#f3f6fb}
+header{background:linear-gradient(135deg,#2563eb,#1e40af);color:#fff;padding:18px;text-align:center;font-size:24px;font-weight:bold;position:relative}
+.back-btn{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#fff;text-decoration:none}
+.container{padding:15px;max-width:900px;margin:auto}
+.card{background:#fff;border-radius:16px;padding:15px;margin-bottom:15px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+input,select,textarea{width:100%;padding:10px;margin:6px 0 10px;border:1px solid #d1d5db;border-radius:10px;box-sizing:border-box}
+button{width:100%;padding:12px;border:none;border-radius:10px;background:#2563eb;color:#fff;font-size:16px}
+.stats{display:flex;gap:10px;margin-bottom:10px}
+.stat{flex:1;background:white;padding:10px;border-radius:12px;text-align:center;font-weight:bold}
+.task{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.done{text-decoration:line-through;opacity:.5}
+.badge{padding:3px 8px;border-radius:20px;color:#fff;font-size:11px;font-weight:bold}
+.priority-high{background:#dc2626}
+.priority-mid{background:#f59e0b}
+.priority-low{background:#16a34a}
+.small{font-size:12px;color:#666}
+.delete-btn{background:#dc2626;width:auto;padding:6px 10px}
+.today{animation:blink 1s infinite}
+.overdue{background:#fee2e2}
+.warning{background:#fff7ed}
+@keyframes blink{50%{opacity:.4}}
 </style>
 </head>
-
 <body>
-
 <header>
-    <!-- top.htmlに戻るボタンを追加 -->
-    <a href="top.html" class="back-btn">＜ 戻る</a>
-    📚 教員タスク管理 (同期中)
+<a href="top.html" class="back-btn">＜戻る</a>
+📚 教員タスク管理 Pro
 </header>
 
 <div class="container">
+
+<div class="stats">
+<div class="stat">総数<br><span id="taskCount">0</span></div>
+<div class="stat">未完了<br><span id="openCount">0</span></div>
+</div>
 
 <div class="card">
 <h3>タスク追加</h3>
@@ -137,182 +52,146 @@ button:hover{
 <option>中</option>
 <option>低</option>
 </select>
-<textarea id="memo" rows="3" placeholder="メモ"></textarea>
+<textarea id="memo" rows="3"></textarea>
 <button id="addBtn" onclick="addTask()">追加</button>
 </div>
 
-<!-- 設定アイコンっぽく配置 -->
-<div style="text-align: right; margin-bottom: 10px;">
-    <a href="category.html" style="color:#2563eb; font-size:14px; text-decoration:none;">⚙ カテゴリ編集へ</a>
+<div class="card">
+<h3>タスク一覧</h3>
+<div id="taskList"></div>
 </div>
-
-<div class="card" style="margin-top:10px;">
-<h3>全端末共通タスクリスト</h3>
-<div id="taskList"><p class="loading-text">データを読み込み中...</p></div>
-</div>
-
 </div>
 
 <script>
-// --- Supabase 設定 ---
-const SUPABASE_URL = "https://klewsfgafeixuvghkkvi.supabase.co"; 
-const SUPABASE_KEY = "sb_publishable_pexunuSRbbG_3GgfTUovTA_i7iwAHG0";
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL="https://klewsfgafeixuvghkkvi.supabase.co";
+const SUPABASE_KEY="sb_publishable_pexunuSRbbG_3GgfTUovTA_i7iwAHG0";
+const _supabase=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-let tasks = [];
+const categoryColors={
+"学級経営":"#2563eb",
+"授業準備":"#16a34a",
+"校務分掌":"#f59e0b",
+"生徒指導":"#dc2626",
+"保護者対応":"#9333ea",
+"研修":"#0891b2",
+"日本人学校":"#ec4899",
+"その他":"#6b7280"
+};
 
-// --- カテゴリ読み込み (LocalStorageを使用) ---
+const categoryIcons={
+"学級経営":"🏫",
+"授業準備":"📖",
+"校務分掌":"📋",
+"生徒指導":"👦",
+"保護者対応":"👨‍👩‍👧",
+"研修":"🎓",
+"日本人学校":"🌏",
+"その他":"📌"
+};
+
+let tasks=[];
+
 if(!localStorage.getItem("teacherCategories")){
-    localStorage.setItem("teacherCategories", JSON.stringify(["学級経営","授業準備","校務分掌","生徒指導","保護者対応","研修","日本人学校","その他"]));
+localStorage.setItem("teacherCategories",JSON.stringify(Object.keys(categoryColors)));
 }
 
 function loadCategories(){
-    const select = document.getElementById("category");
-    const categories = JSON.parse(localStorage.getItem("teacherCategories")) || [];
-    select.innerHTML = "";
-    categories.forEach(c=>{
-        const opt = document.createElement("option");
-        opt.textContent = c;
-        select.appendChild(opt);
-    });
+const select=document.getElementById("category");
+select.innerHTML="";
+(JSON.parse(localStorage.getItem("teacherCategories"))||[]).forEach(c=>{
+let o=document.createElement("option");
+o.textContent=c;
+select.appendChild(o);
+});
 }
 loadCategories();
 
-// --- タスク取得 (Supabaseから) ---
-async function fetchTasks() {
-    const { data, error } = await _supabase
-        .from('tasks')
-        .select('*');
-
-    if (error) {
-        console.error("データ取得エラー:", error);
-        document.getElementById("taskList").innerHTML = "エラーが発生しました";
-        return;
-    }
-
-    tasks = data;
-    renderTasks();
+async function fetchTasks(){
+const {data}=await _supabase.from('tasks').select('*');
+tasks=data||[];
+renderTasks();
 }
 
-// --- タスク追加 (Supabaseへ) ---
 async function addTask(){
-    const titleInput = document.getElementById("title");
-    const title = titleInput.value;
-    const deadline = document.getElementById("deadline").value;
-    const btn = document.getElementById("addBtn");
-
-    if(title === ""){
-        alert("タスク名を入力してください");
-        return;
-    }
-
-    btn.disabled = true;
-    btn.innerText = "送信中...";
-
-    const newTask = {
-        title: title,
-        category: document.getElementById("category").value,
-        deadline: deadline || null,
-        priority: document.getElementById("priority").value,
-        memo: document.getElementById("memo").value,
-        done: false
-    };
-
-    const { error } = await _supabase.from('tasks').insert([newTask]);
-
-    if (error) {
-        alert("追加に失敗しました: " + error.message);
-    } else {
-        titleInput.value = "";
-        document.getElementById("memo").value = "";
-        await fetchTasks(); 
-    }
-
-    btn.disabled = false;
-    btn.innerText = "追加";
-}
-
-// --- 完了状態の切り替え ---
-async function toggleTask(id, currentStatus){
-    const { error } = await _supabase
-        .from('tasks')
-        .update({ done: !currentStatus })
-        .eq('id', id);
-
-    if (error) {
-        console.error("更新エラー:", error);
-        alert("更新に失敗しました: " + error.message);
-    } else {
-        await fetchTasks();
-    }
-}
-
-// --- タスク削除 ---
-async function deleteTask(id){
-    if(confirm("削除しますか？")){
-        const { error } = await _supabase
-            .from('tasks')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            console.error("削除エラー:", error);
-            alert("削除に失敗しました: " + error.message);
-        } else {
-            await fetchTasks();
-        }
-    }
-}
-
-// --- 画面表示 ---
-function renderTasks(){
-    const list = document.getElementById("taskList");
-    list.innerHTML = "";
-
-    if (!tasks || tasks.length === 0) {
-        list.innerHTML = "<p class='loading-text'>タスクはありません</p>";
-        return;
-    }
-
-    // 日時順に並び替え
-    const sortedTasks = [...tasks].sort((a, b) => {
-        if (!a.deadline) return 1;
-        if (!b.deadline) return -1;
-        return new Date(a.deadline) - new Date(b.deadline);
-    });
-
-    sortedTasks.forEach((task)=>{
-        const div = document.createElement("div");
-        div.className = "task";
-        div.innerHTML = `
-        <div class="task-left ${task.done ? 'done':''}">
-            <strong>${task.title}</strong><br>
-            <span class="small">
-            ${task.category}
-            ｜締切:${task.deadline || '未設定'}
-            ｜優先度:${task.priority}
-            </span><br>
-            <span class="small">${task.memo || ''}</span>
-        </div>
-        <div>
-            <input
-            type="checkbox"
-            ${task.done ? 'checked':''}
-            onchange="toggleTask('${task.id}', ${task.done})">
-            <button
-            class="delete-btn"
-            onclick="deleteTask('${task.id}')">
-            削除
-            </button>
-        </div>
-        `;
-        list.appendChild(div);
-    });
-}
-
-// 初回起動時の読み込み
+const title=document.getElementById("title").value;
+if(!title){alert("タスク名を入力してください");return;}
+await _supabase.from('tasks').insert([{
+title,
+category:document.getElementById("category").value,
+deadline:document.getElementById("deadline").value||null,
+priority:document.getElementById("priority").value,
+memo:document.getElementById("memo").value,
+done:false
+}]);
+document.getElementById("title").value="";
+document.getElementById("memo").value="";
 fetchTasks();
+}
 
+async function toggleTask(id,current){
+await _supabase.from('tasks').update({done:!current}).eq('id',id);
+fetchTasks();
+}
+
+async function deleteTask(id){
+if(confirm("削除しますか？")){
+await _supabase.from('tasks').delete().eq('id',id);
+fetchTasks();
+}
+}
+
+function renderTasks(){
+const list=document.getElementById("taskList");
+list.innerHTML="";
+
+document.getElementById("taskCount").textContent=tasks.length;
+document.getElementById("openCount").textContent=tasks.filter(t=>!t.done).length;
+
+tasks.sort((a,b)=>new Date(a.deadline||"2999-12-31")-new Date(b.deadline||"2999-12-31"));
+
+tasks.forEach(task=>{
+const color=categoryColors[task.category]||"#2563eb";
+const icon=categoryIcons[task.category]||"📌";
+
+let priorityClass="priority-low";
+if(task.priority==="高") priorityClass="priority-high";
+if(task.priority==="中") priorityClass="priority-mid";
+
+let extraClass="";
+let deadlineText=task.deadline||"未設定";
+
+if(task.deadline){
+const today=new Date();
+today.setHours(0,0,0,0);
+const due=new Date(task.deadline);
+const diff=Math.ceil((due-today)/(1000*60*60*24));
+
+if(diff<0) extraClass="overdue";
+else if(diff===0) extraClass="today";
+else if(diff<=3) extraClass="warning";
+}
+
+const div=document.createElement("div");
+div.className="task "+extraClass;
+div.style.borderLeft="6px solid "+color;
+
+div.innerHTML=`
+<div class="${task.done?'done':''}">
+<strong>${icon} ${task.title}</strong><br>
+<span class="badge" style="background:${color}">${task.category}</span>
+<span class="badge ${priorityClass}">${task.priority}</span><br>
+<span class="small">締切:${deadlineText}</span><br>
+<span class="small">${task.memo||""}</span>
+</div>
+<div>
+<input type="checkbox" ${task.done?'checked':''}
+onchange="toggleTask('${task.id}',${task.done})"><br>
+<button class="delete-btn" onclick="deleteTask('${task.id}')">削除</button>
+</div>`;
+list.appendChild(div);
+});
+}
+fetchTasks();
 </script>
 </body>
 </html>
