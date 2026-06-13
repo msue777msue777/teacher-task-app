@@ -3,31 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>所見作成支援アプリ（5・6年対応版）</title>
+    <title>所見作成支援アプリ</title>
     <style>
         body { font-family: -apple-system, sans-serif; padding: 15px; background-color: #f0f2f5; color: #333; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h1 { font-size: 1.1rem; text-align: center; color: #1a73e8; margin-bottom: 20px; border-bottom: 2px solid #1a73e8; padding-bottom: 10px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { font-size: 1rem; text-align: center; color: #1a73e8; margin-bottom: 20px; border-bottom: 2px solid #1a73e8; padding-bottom: 10px; }
         label { display: block; margin-top: 12px; font-weight: bold; font-size: 0.85rem; color: #555; }
-        select, input, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        select, input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
         .radio-group { margin-top: 8px; display: flex; justify-content: space-around; background: #f8f9fa; padding: 10px; border-radius: 8px; }
         button { width: 100%; padding: 14px; background: #1a73e8; color: white; border: none; border-radius: 8px; margin-top: 20px; cursor: pointer; font-size: 1rem; font-weight: bold; }
         #result-area { margin-top: 20px; padding: 15px; background: #e8f0fe; border: 1px solid #c2d7fa; border-radius: 8px; display: none; }
-        .copy-btn { background: #5f6368; margin-top: 10px; font-size: 0.8rem; height: auto; width: auto; padding: 8px 15px; }
+        .copy-btn { background: #5f6368; margin-top: 10px; width: auto; padding: 8px 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📝 所見作成支援（5・6年/教科書準拠）</h1>
+    <h1>📝 所見作成（5・6年教科書準拠）</h1>
     
-    <label>学年：</label>
+    <label>1. 学年を選択：</label>
     <select id="grade" onchange="updateUnits()">
+        <option value="6">第6学年</option>
         <option value="5">第5学年</option>
-        <option value="6" selected>第6学年</option>
     </select>
 
-    <label>教科：</label>
+    <label>2. 教科を選択：</label>
     <select id="subject" onchange="updateUnits()">
         <option value="国語">国語（光村）</option>
         <option value="算数">算数（東書）</option>
@@ -38,56 +38,122 @@
         <option value="行事">学校行事</option>
     </select>
 
-    <label>単元名：</label>
-    <select id="unit"></select>
+    <label>3. 単元名を選択：</label>
+    <select id="unit">
+        <!-- ここに自動で単元が入ります -->
+    </select>
 
-    <label>作成者の視点：</label>
+    <label>4. 作成者の視点：</label>
     <div class="radio-group">
-        <label><input type="radio" name="persona" value="ベテラン" checked> ベテラン教師</label>
-        <label><input type="radio" name="persona" value="調査官"> 教科調査官</label>
+        <label><input type="radio" name="persona" value="ベテラン" checked> ベテラン</label>
+        <label><input type="radio" name="persona" value="調査官"> 調査官</label>
     </div>
 
-    <label>役割（班長、リレー選手など）：</label>
+    <label>5. 役割・エピソード（メモ）：</label>
     <input type="text" id="role" placeholder="例：班長、応援団員">
+    <textarea id="episode" placeholder="例：進んで発表した。友達を助けた。" style="height: 80px;"></textarea>
 
-    <label>具体的な様子（メモ）：</label>
-    <textarea id="episode" placeholder="例：図を使って説明した。友達の意見を尊重していた。"></textarea>
-
-    <button onclick="generate()">所見を自動作成（ルール適用）</button>
+    <button onclick="generate()">所見を作成する</button>
 
     <div id="result-area">
         <strong>【生成結果】</strong>
-        <p id="result-text" style="line-height:1.6; white-space: pre-wrap;"></p>
-        <button class="copy-btn" onclick="copyText()">文章をコピーする</button>
+        <p id="result-text" style="line-height:1.6;"></p>
+        <button class="copy-btn" onclick="copyText()">コピー</button>
     </div>
 </div>
 
 <script>
+// データベース
 const data = [
     // 6年生
-    { g: "6", s: "国語", u: "帰り道", goal: "登場人物の心情の変化を叙述に基づいて多角的に捉える能力" },
-    { g: "6", s: "国語", u: "笑うから楽しい", goal: "事実と感想、意見の関係を捉え、自分の考えをまとめる能力" },
-    { g: "6", s: "国語", u: "時計の時間と心の時間", goal: "事例と主張の関係を整理し、構成を工夫して書く能力" },
-    { g: "6", s: "国語", u: "鳥獣戯画を読む", goal: "筆者の捉え方について、自分の考えを論理的にまとめる能力" },
-    { g: "6", s: "算数", u: "対称な図形", goal: "線対称や点対称な図形の性質を理解し、数学的な見方で捉える能力" },
-    { g: "6", s: "算数", u: "分数のかけ算", goal: "分数の乗法の意味を理解し、既習の計算のきまりを適用して考える能力" },
-    { g: "6", s: "算数", u: "分数のわり算", goal: "除法が分数の場合も成り立つことを理解し、計算の仕方を説明する能力" },
-    { g: "6", s: "算数", u: "比", goal: "二つの数量の関係を比を用いて表し、等しい比の性質を見だす能力" },
-    { g: "6", s: "社会", u: "政治のしくみとわたしたちのくらし", goal: "憲法や政治の役割が国民生活に深く関わっていることを理解する能力" },
-    { g: "6", s: "社会", u: "日本の歩み（歴史）", goal: "日本の歴史上の主な事象を、人々の願いや努力と関連付けて考える能力" },
-    { g: "6", s: "理科", u: "物の燃え方", goal: "燃焼前後の空気の変化を調べ、根拠を持って推論する能力" },
-    { g: "6", s: "理科", u: "動物の体とつくり", goal: "消化や呼吸、血液の循環を関連付け、生命を維持する仕組みを考える能力" },
-    { g: "6", s: "道徳", u: "誠実な心", goal: "自分の良心に従い、誠実に明るい心で生活しようとする態度" },
-    { g: "6", s: "道徳", u: "平和への願い", goal: "平和の大切さを理解し、世界の人々と親善を深めようとする態度" },
+    { g: "6", s: "国語", u: "帰り道", goal: "心情の変化を叙述から捉える能力" },
+    { g: "6", s: "国語", u: "笑うから楽しい", goal: "事実と思いの関係を捉える能力" },
+    { g: "6", s: "国語", u: "鳥獣戯画を読む", goal: "筆者の捉え方を論理的に考える能力" },
+    { g: "6", s: "算数", u: "対称な図形", goal: "対称の性質を理解し図形を捉える能力" },
+    { g: "6", s: "算数", u: "分数のかけ算", goal: "分数のかけ算の意味と計算の仕方を考える能力" },
+    { g: "6", s: "算数", u: "比", goal: "数量の関係を比で表し等しい比を考える能力" },
+    { g: "6", s: "社会", u: "政治のしくみ", goal: "憲法や政治が国民生活に関わることを理解する能力" },
+    { g: "6", s: "社会", u: "武士の世の中", goal: "歴史的事象を人々の願いと関連付ける能力" },
+    { g: "6", s: "理科", u: "物の燃え方", goal: "空気の変化を調べ根拠を持って推論する能力" },
+    { g: "6", s: "道徳", u: "誠実な心", goal: "誠実に明るい心で生活しようとする態度" },
 
     // 5年生
-    { g: "5", s: "国語", u: "なまえつけてよ", goal: "登場人物の相互関係や気持ちの変化を捉える能力" },
-    { g: "5", s: "国語", u: "見立てる", goal: "筆者の考えの進め方を捉え、自分の考えをまとめる能力" },
-    { g: "5", s: "国語", u: "大造じいさんとガン", goal: "優れた表現を味わい、情景を思い浮かべて読む能力" },
-    { g: "5", s: "算数", u: "体積", goal: "直方体や立方体の体積の求め方を考え、公式を導き出す能力" },
-    { g: "5", s: "算数", u: "小数のかけ算", goal: "乗数が小数の場合も計算のきまりが成り立つことを理解する能力" },
-    { g: "5", s: "算数", u: "合同な図形", goal: "図形の構成要素に着目し、合同な図形の性質を理解する能力" },
-    { g: "5", s: "社会", u: "国土の地形と気候", goal: "日本の国土の様子を、地形や気候と関連付けて考える能力" },
-    { g: "5", s: "社会", u: "食料生産のさかんな地域", goal: "食料の生産現場での工夫や努力、課題について考える能力" },
-    { g: "5", s: "理科", u: "植物の発芽と成長", goal: "発芽の条件を制御し、条件を変えて実験を行う能力" },
-    { g: "5", s: "理科", u: "メダカのたんじょう", goal: "生命のつながりに着目し、卵の育ち方や変化を調べる能力" },
+    { g: "5", s: "国語", u: "なまえつけてよ", goal: "登場人物の関係や心情の変化を捉える能力" },
+    { g: "5", s: "国語", u: "大造じいさんとガン", goal: "優れた表現を味わい情景を思い浮かべる能力" },
+    { g: "5", s: "算数", u: "体積", goal: "直方体の体積の求め方を考え公式を導く能力" },
+    { g: "5", s: "算数", u: "小数のかけ算", goal: "乗数が小数の場合の計算を理解する能力" },
+    { g: "5", s: "社会", u: "国土の地形", goal: "地形や気候を生活と関連付けて考える能力" },
+    { g: "5", s: "理科", u: "植物の発芽", goal: "発芽の条件を考え実験を行う能力" },
+    { g: "5", s: "道徳", u: "自由と責任", goal: "自由を尊び責任を持って行動しようとする態度" },
+
+    // 共通
+    { g: "all", s: "生活面", u: "責任感", goal: "役割を自覚し最後までやり遂げる態度" },
+    { g: "all", s: "生活面", u: "思いやり", goal: "相手の気持ちを考え親切にする態度" },
+    { g: "all", s: "行事", u: "運動会", goal: "集団の一員として協力し努力する姿" },
+    { g: "all", s: "行事", u: "委員会", goal: "学校を支える自覚を持ち役割を果たす姿" }
+];
+
+// 単元リストを更新する関数
+function updateUnits() {
+    const grade = document.getElementById('grade').value;
+    const sub = document.getElementById('subject').value;
+    const unitSel = document.getElementById('unit');
+    
+    // 一旦クリア
+    unitSel.innerHTML = "";
+    
+    // フィルタリング
+    const filtered = data.filter(d => (d.g === grade || d.g === "all") && d.s === sub);
+    
+    if (filtered.length === 0) {
+        const opt = document.createElement('option');
+        opt.textContent = "単元が見つかりません";
+        unitSel.appendChild(opt);
+    } else {
+        filtered.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.u;
+            opt.textContent = d.u;
+            unitSel.appendChild(opt);
+        });
+    }
+}
+
+// 所見生成関数
+function generate() {
+    const sub = document.getElementById('subject').value;
+    const unit = document.getElementById('unit').value;
+    const role = document.getElementById('role').value;
+    const epi = document.getElementById('episode').value;
+    const persona = document.querySelector('input[name="persona"]:checked').value;
+    
+    const goalData = data.find(d => d.u === unit);
+    if(!goalData || unit === "単元が見つかりません") {
+        alert("単元を選択してください");
+        return;
+    }
+
+    const subName = (sub === "生活面" || sub === "行事") ? "" : sub + "科";
+    const header = subName ? `${subName}の「${unit}」の学習では、` : `「${unit}」では、`;
+    
+    let body = "";
+    if (persona === "ベテラン") {
+        body = `${goalData.goal}において、熱心に取り組む姿が見られました。${role ? role + 'として周囲を支え、' : ''}${epi ? epi : '自ら考えを深める'}ことで、着実に成長しています。`;
+    } else {
+        body = `${goalData.goal}を深く理解し、資質を発揮しました。${role ? role + 'の役割を全うし、' : ''}${epi ? epi : '主体的な学び'}を通じて、論理的な見方・考え方を深めることができています。`;
+    }
+
+    document.getElementById('result-text').textContent = header + body;
+    document.getElementById('result-area').style.display = 'block';
+}
+
+function copyText() {
+    navigator.clipboard.writeText(document.getElementById('result-text').textContent);
+    alert("コピーしました");
+}
+
+// ページ読み込み時に一度実行
+window.onload = updateUnits;
+</script>
+</body>
+</html>
