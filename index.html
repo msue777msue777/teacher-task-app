@@ -19,8 +19,10 @@
     .small{ font-size:12px; color:#666; }
     .cat-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-bottom: 4px; color: white; }
     .done{ text-decoration:line-through; opacity:0.5; }
-    .delete-btn{ background:red; color:white; border:none; padding:5px 10px; border-radius:6px; width:auto; }
+    .delete-btn{ background:red; color:white; border:none; padding:5px 10px; border-radius:6px; width:auto; margin-left: 5px;}
+    .edit-btn{ background:#f59e0b; color:white; border:none; padding:5px 10px; border-radius:6px; width:auto; }
     .loading-text { text-align: center; color: #666; font-size: 14px; }
+    .cancel-btn { background:#94a3b8; margin-top: 5px; }
 </style>
 </head>
 <body>
@@ -32,7 +34,7 @@
 
 <div class="container">
     <div class="card">
-        <h3>タスク追加</h3>
+        <h3 id="formTitle">タスク追加</h3>
         <input id="title" placeholder="タスク名">
         <select id="category"></select>
         <input type="date" id="deadline">
@@ -42,7 +44,8 @@
             <option>低</option>
         </select>
         <textarea id="memo" rows="3" placeholder="メモ"></textarea>
-        <button id="addBtn" onclick="addTask()">追加</button>
+        <button id="addBtn" onclick="saveTask()">追加</button>
+        <button id="cancelBtn" class="cancel-btn" onclick="clearForm()" style="display:none;">キャンセル</button>
     </div>
 
     <div style="text-align: right; margin-bottom: 10px;">
@@ -61,8 +64,9 @@ const SUPABASE_KEY = "sb_publishable_pexunuSRbbG_3GgfTUovTA_i7iwAHG0";
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let tasks = [];
+let editingId = null; // 編集中のタスクIDを保持
 
-// カテゴリデータの初期化と変換処理
+// カテゴリデータの初期化
 function getCategoryData() {
     let data = JSON.parse(localStorage.getItem("teacherCategories"));
     if (!data) {
@@ -72,11 +76,6 @@ function getCategoryData() {
             {name: "保護者対応", color: "#7c3aed"}, {name: "研修", color: "#db2777"},
             {name: "日本人学校", color: "#4b5563"}, {name: "その他", color: "#94a3b8"}
         ];
-        localStorage.setItem("teacherCategories", JSON.stringify(data));
-    }
-    // 古い形式(文字列配列)の場合はオブジェクト形式に変換
-    if (data.length > 0 && typeof data[0] === 'string') {
-        data = data.map(name => ({ name: name, color: "#2563eb" }));
         localStorage.setItem("teacherCategories", JSON.stringify(data));
     }
     return data;
@@ -104,14 +103,18 @@ async function fetchTasks() {
     renderTasks();
 }
 
-async function addTask(){
+// 保存ボタン（新規・更新共通）
+async function saveTask(){
     const titleInput = document.getElementById("title");
     const title = titleInput.value;
     const btn = document.getElementById("addBtn");
+    
     if(title === ""){ alert("タスク名を入力してください"); return; }
+    
     btn.disabled = true;
     btn.innerText = "送信中...";
-    const newTask = {
+
+    const taskData = {
         title: title,
         category: document.getElementById("category").value,
         deadline: document.getElementById("deadline").value || null,
@@ -119,61 +122,38 @@ async function addTask(){
         memo: document.getElementById("memo").value,
         done: false
     };
-    const { error } = await _supabase.from('tasks').insert([newTask]);
-    if (error) { alert("追加に失敗しました"); } else {
-        titleInput.value = ""; document.getElementById("memo").value = "";
+
+    let error;
+    if (editingId) {
+        // 更新モード
+        const { error: updateError } = await _supabase.from('tasks').update(taskData).eq('id', editingId);
+        error = updateError;
+    } else {
+        // 新規作成モード
+        const { error: insertError } = await _supabase.from('tasks').insert([taskData]);
+        error = insertError;
+    }
+
+    if (error) { 
+        alert("保存に失敗しました"); 
+    } else {
+        clearForm();
         await fetchTasks(); 
     }
-    btn.disabled = false; btn.innerText = "追加";
+    btn.disabled = false;
 }
 
-async function toggleTask(id, currentStatus){
-    await _supabase.from('tasks').update({ done: !currentStatus }).eq('id', id);
-    await fetchTasks();
-}
+// 編集モードに入る
+function startEdit(id) {
+    const task = tasks.find(t => t.id == id);
+    if (!task) return;
 
-async function deleteTask(id){
-    if(confirm("削除しますか？")){
-        await _supabase.from('tasks').delete().eq('id', id);
-        await fetchTasks();
-    }
-}
-
-function renderTasks(){
-    const list = document.getElementById("taskList");
-    const categoryData = getCategoryData();
-    list.innerHTML = "";
-    if (!tasks || tasks.length === 0) {
-        list.innerHTML = "<p class='loading-text'>タスクはありません</p>";
-        return;
-    }
-    const sortedTasks = [...tasks].sort((a, b) => {
-        if (!a.deadline) return 1; if (!b.deadline) return -1;
-        return new Date(a.deadline) - new Date(b.deadline);
-    });
-    sortedTasks.forEach((task)=>{
-        const catInfo = categoryData.find(c => c.name === task.category) || {color: "#ccc"};
-        const div = document.createElement("div");
-        div.className = "task";
-        div.style.borderLeftColor = catInfo.color;
-        div.innerHTML = `
-        <div class="task-left ${task.done ? 'done':''}">
-            <span class="cat-badge" style="background:${catInfo.color}">${task.category}</span><br>
-            <strong style="font-size:17px;">${task.title}</strong><br>
-            <span class="small">締切:${task.deadline || '未設定'} ｜ 優先度:${task.priority}</span><br>
-            <span class="small">${task.memo || ''}</span>
-        </div>
-        <div>
-            <input type="checkbox" ${task.done ? 'checked':''} onchange="toggleTask('${task.id}', ${task.done})">
-            <button class="delete-btn" onclick="deleteTask('${task.id}')">削除</button>
-        </div>
-        `;
-        list.appendChild(div);
-    });
-}
-
-loadCategories();
-fetchTasks();
-</script>
-</body>
-</html>
+    editingId = id;
+    document.getElementById("formTitle").innerText = "タスクを編集";
+    document.getElementById("title").value = task.title;
+    document.getElementById("category").value = task.category;
+    document.getElementById("deadline").value = task.deadline || "";
+    document.getElementById("priority").value = task.priority;
+    document.getElementById("memo").value = task.memo || "";
+    
+    document.getElementById("
