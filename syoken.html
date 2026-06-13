@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>所見作成支援アプリ</title>
+    <title>所見作成支援・プロンプト生成</title>
     <style>
         body { font-family: -apple-system, sans-serif; padding: 15px; background-color: #f0f2f5; color: #333; }
         .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -11,23 +11,29 @@
         label { display: block; margin-top: 12px; font-weight: bold; font-size: 0.85rem; color: #555; }
         select, input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
         .radio-group { margin-top: 8px; display: flex; justify-content: space-around; background: #f8f9fa; padding: 10px; border-radius: 8px; }
-        button { width: 100%; padding: 14px; background: #1a73e8; color: white; border: none; border-radius: 8px; margin-top: 20px; cursor: pointer; font-size: 1rem; font-weight: bold; }
-        #result-area { margin-top: 20px; padding: 15px; background: #e8f0fe; border: 1px solid #c2d7fa; border-radius: 8px; display: none; }
-        .copy-btn { background: #5f6368; margin-top: 10px; width: auto; padding: 8px 15px; }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        button { flex: 1; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: bold; color: white; }
+        .btn-blue { background: #1a73e8; }
+        .btn-green { background: #34a853; }
+        #result-area, #prompt-area { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; }
+        #result-area { background: #e8f0fe; border: 1px solid #c2d7fa; }
+        #prompt-area { background: #fff4e5; border: 1px solid #ffcc80; }
+        .copy-btn { background: #5f6368; margin-top: 10px; width: auto; padding: 8px 15px; color: white; border-radius: 5px; font-size: 0.75rem; }
+        pre { white-space: pre-wrap; font-size: 0.85rem; background: #fff; padding: 10px; border-radius: 5px; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📝 所見作成（5・6年教科書準拠）</h1>
+    <h1>📝 所見作成プロンプト生成（5・6年版）</h1>
     
-    <label>1. 学年を選択：</label>
+    <label>1. 学年：</label>
     <select id="grade" onchange="updateUnits()">
         <option value="6">第6学年</option>
         <option value="5">第5学年</option>
     </select>
 
-    <label>2. 教科を選択：</label>
+    <label>2. 教科：</label>
     <select id="subject" onchange="updateUnits()">
         <option value="国語">国語（光村）</option>
         <option value="算数">算数（東書）</option>
@@ -38,121 +44,118 @@
         <option value="行事">学校行事</option>
     </select>
 
-    <label>3. 単元名を選択：</label>
-    <select id="unit">
-        <!-- ここに自動で単元が入ります -->
-    </select>
+    <label>3. 単元名：</label>
+    <select id="unit"></select>
 
     <label>4. 作成者の視点：</label>
     <div class="radio-group">
-        <label><input type="radio" name="persona" value="ベテラン" checked> ベテラン</label>
-        <label><input type="radio" name="persona" value="調査官"> 調査官</label>
+        <label><input type="radio" name="persona" value="ベテラン教師" checked> ベテラン</label>
+        <label><input type="radio" name="persona" value="教科調査官"> 調査官</label>
     </div>
 
-    <label>5. 役割・エピソード（メモ）：</label>
+    <label>5. 役割・具体的な様子（メモ）：</label>
     <input type="text" id="role" placeholder="例：班長、応援団員">
-    <textarea id="episode" placeholder="例：進んで発表した。友達を助けた。" style="height: 80px;"></textarea>
+    <textarea id="episode" placeholder="例：進んで発表した。友達を助けた。算数の計算が早くなった。" style="height: 80px;"></textarea>
 
-    <button onclick="generate()">所見を作成する</button>
+    <div class="btn-group">
+        <button class="btn-blue" onclick="generate()">簡易作成</button>
+        <button class="btn-green" onclick="generatePrompt()">AI用プロンプト作成</button>
+    </div>
 
     <div id="result-area">
-        <strong>【生成結果】</strong>
-        <p id="result-text" style="line-height:1.6;"></p>
-        <button class="copy-btn" onclick="copyText()">コピー</button>
+        <strong>【簡易作成結果】</strong>
+        <p id="result-text" style="font-size:0.9rem; line-height:1.6;"></p>
+        <button class="copy-btn" onclick="copyText('result-text')">コピー</button>
+    </div>
+
+    <div id="prompt-area">
+        <strong>【AIへの指示文（コピーしてChatGPTへ）】</strong>
+        <pre id="prompt-text"></pre>
+        <button class="copy-btn" onclick="copyText('prompt-text')">プロンプトをコピー</button>
     </div>
 </div>
 
 <script>
-// データベース
 const data = [
-    // 6年生
-    { g: "6", s: "国語", u: "帰り道", goal: "心情の変化を叙述から捉える能力" },
-    { g: "6", s: "国語", u: "笑うから楽しい", goal: "事実と思いの関係を捉える能力" },
-    { g: "6", s: "国語", u: "鳥獣戯画を読む", goal: "筆者の捉え方を論理的に考える能力" },
-    { g: "6", s: "算数", u: "対称な図形", goal: "対称の性質を理解し図形を捉える能力" },
-    { g: "6", s: "算数", u: "分数のかけ算", goal: "分数のかけ算の意味と計算の仕方を考える能力" },
-    { g: "6", s: "算数", u: "比", goal: "数量の関係を比で表し等しい比を考える能力" },
+    { g: "6", s: "国語", u: "帰り道", goal: "心情の変化を叙述から多角的に捉える能力" },
+    { g: "6", s: "国語", u: "鳥獣戯画を読む", goal: "筆者の捉え方について自分の考えを論理的にまとめる能力" },
+    { g: "6", s: "算数", u: "対称な図形", goal: "対称の性質を理解し数学的な見方で図形を捉える能力" },
+    { g: "6", s: "算数", u: "分数のかけ算", goal: "分数のかけ算の意味を理解し計算の仕方を説明する能力" },
     { g: "6", s: "社会", u: "政治のしくみ", goal: "憲法や政治が国民生活に関わることを理解する能力" },
-    { g: "6", s: "社会", u: "武士の世の中", goal: "歴史的事象を人々の願いと関連付ける能力" },
     { g: "6", s: "理科", u: "物の燃え方", goal: "空気の変化を調べ根拠を持って推論する能力" },
-    { g: "6", s: "道徳", u: "誠実な心", goal: "誠実に明るい心で生活しようとする態度" },
-
-    // 5年生
     { g: "5", s: "国語", u: "なまえつけてよ", goal: "登場人物の関係や心情の変化を捉える能力" },
-    { g: "5", s: "国語", u: "大造じいさんとガン", goal: "優れた表現を味わい情景を思い浮かべる能力" },
-    { g: "5", s: "算数", u: "体積", goal: "直方体の体積の求め方を考え公式を導く能力" },
-    { g: "5", s: "算数", u: "小数のかけ算", goal: "乗数が小数の場合の計算を理解する能力" },
-    { g: "5", s: "社会", u: "国土の地形", goal: "地形や気候を生活と関連付けて考える能力" },
-    { g: "5", s: "理科", u: "植物の発芽", goal: "発芽の条件を考え実験を行う能力" },
-    { g: "5", s: "道徳", u: "自由と責任", goal: "自由を尊び責任を持って行動しようとする態度" },
-
-    // 共通
-    { g: "all", s: "生活面", u: "責任感", goal: "役割を自覚し最後までやり遂げる態度" },
-    { g: "all", s: "生活面", u: "思いやり", goal: "相手の気持ちを考え親切にする態度" },
-    { g: "all", s: "行事", u: "運動会", goal: "集団の一員として協力し努力する姿" },
-    { g: "all", s: "行事", u: "委員会", goal: "学校を支える自覚を持ち役割を果たす姿" }
+    { g: "5", s: "算数", u: "小数のかけ算", goal: "乗数が小数の場合の計算を理解し説明する能力" },
+    { g: "all", s: "生活面", u: "責任感", goal: "自分の役割を自覚し最後までやり遂げる態度" },
+    { g: "all", s: "行事", u: "運動会", goal: "集団の一員として協力し努力する姿" }
 ];
 
-// 単元リストを更新する関数
 function updateUnits() {
     const grade = document.getElementById('grade').value;
     const sub = document.getElementById('subject').value;
     const unitSel = document.getElementById('unit');
-    
-    // 一旦クリア
     unitSel.innerHTML = "";
-    
-    // フィルタリング
-    const filtered = data.filter(d => (d.g === grade || d.g === "all") && d.s === sub);
-    
-    if (filtered.length === 0) {
+    data.filter(d => (d.g === grade || d.g === "all") && d.s === sub).forEach(d => {
         const opt = document.createElement('option');
-        opt.textContent = "単元が見つかりません";
-        unitSel.appendChild(opt);
-    } else {
-        filtered.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d.u;
-            opt.textContent = d.u;
-            unitSel.appendChild(opt);
-        });
-    }
+        opt.value = d.u; opt.textContent = d.u; unitSel.appendChild(opt);
+    });
 }
 
-// 所見生成関数
 function generate() {
     const sub = document.getElementById('subject').value;
     const unit = document.getElementById('unit').value;
+    const persona = document.querySelector('input[name="persona"]:checked').value;
+    const goal = data.find(d => d.u === unit)?.goal || "";
     const role = document.getElementById('role').value;
     const epi = document.getElementById('episode').value;
-    const persona = document.querySelector('input[name="persona"]:checked').value;
-    
-    const goalData = data.find(d => d.u === unit);
-    if(!goalData || unit === "単元が見つかりません") {
-        alert("単元を選択してください");
-        return;
-    }
 
     const subName = (sub === "生活面" || sub === "行事") ? "" : sub + "科";
     const header = subName ? `${subName}の「${unit}」の学習では、` : `「${unit}」では、`;
+    const body = `${goal}において優れた成果を見せました。${role ? role + 'として活躍し、' : ''}${epi ? epi : '真面目に取り組む'}姿が立派でした。`;
     
-    let body = "";
-    if (persona === "ベテラン") {
-        body = `${goalData.goal}において、熱心に取り組む姿が見られました。${role ? role + 'として周囲を支え、' : ''}${epi ? epi : '自ら考えを深める'}ことで、着実に成長しています。`;
-    } else {
-        body = `${goalData.goal}を深く理解し、資質を発揮しました。${role ? role + 'の役割を全うし、' : ''}${epi ? epi : '主体的な学び'}を通じて、論理的な見方・考え方を深めることができています。`;
-    }
-
     document.getElementById('result-text').textContent = header + body;
     document.getElementById('result-area').style.display = 'block';
+    document.getElementById('prompt-area').style.display = 'none';
 }
 
-function copyText() {
-    navigator.clipboard.writeText(document.getElementById('result-text').textContent);
-    alert("コピーしました");
+function generatePrompt() {
+    const grade = document.getElementById('grade').value;
+    const sub = document.getElementById('subject').value;
+    const unit = document.getElementById('unit').value;
+    const persona = document.querySelector('input[name="persona"]:checked').value;
+    const goal = data.find(d => d.u === unit)?.goal || "";
+    const role = document.getElementById('role').value;
+    const epi = document.getElementById('episode').value;
+
+    const subName = (sub === "生活面" || sub === "行事") ? "" : sub + "科";
+
+    const prompt = `あなたは熟練の小学校教師であり、通知表作成のプロ（視点：${persona}）です。
+以下の条件を厳守し、最高の所見を1つ作成してください。
+
+【厳守ルール】
+1. 文頭は必ず『${subName ? subName + "の「" + unit + "」の学習では、" : "「" + unit + "」では、"}』で始めてください。
+2. 指導要領のねらい（${goal}）を必ず反映させてください。
+3. ポジティブな表現を使い、「～する姿が見られました」「～ができました」という語尾にしてください。
+4. 文字数は150文字程度に調整してください。
+
+【対象児童の情報】
+・学年：第${grade}学年
+・教科：${subName || sub}
+・役割：${role || "特になし"}
+・具体的な様子やエピソード：${epi || "一生懸命取り組んだ"}
+
+これらを自然に繋げて、プロが書いたような説得力のある文章にしてください。`;
+
+    document.getElementById('prompt-text').textContent = prompt;
+    document.getElementById('prompt-area').style.display = 'block';
+    document.getElementById('result-area').style.display = 'none';
 }
 
-// ページ読み込み時に一度実行
+function copyText(id) {
+    const text = document.getElementById(id).innerText;
+    navigator.clipboard.writeText(text);
+    alert("コピーしました。AIに貼り付けてください。");
+}
+
 window.onload = updateUnits;
 </script>
 </body>
