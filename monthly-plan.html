@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>月案・週案 Pro - 同期安定版</title>
+    <title>月案・週案メーカー Pro - 軸変更・安定同期版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #2563eb; --bg: #f8fafc; --success: #10b981; }
@@ -25,6 +25,7 @@
         .sun { background: #fef2f2 !important; color: #dc2626; }
         .event-input, .dismissal-input { width: 100%; border: 1px solid #eee; padding: 2px; box-sizing: border-box; }
 
+        /* --- 印刷設定 --- */
         @media print {
             @page { size: A4 portrait; margin: 6mm 5mm; }
             body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -34,15 +35,15 @@
             
             /* 1枚に収めるための縦幅調整 */
             table { border: 1.2pt solid black !important; font-size: 8.5pt; width: 100%; }
-            th, td { border: 0.5pt solid black !important; height: 19px !important; padding: 0 2px !important; line-height: 1; }
+            th, td { border: 0.5pt solid black !important; height: 19.2px !important; padding: 0 2px !important; line-height: 1; }
             
-            /* 横幅の指定 */
+            /* 横幅：時間割列を極小、行事欄を最大に */
             .col-date, .col-day { width: 22px; }
-            .col-event { width: auto; text-align: left; } /* ここを広く */
-            .col-subj, .col-dismiss { width: 32px; font-size: 8pt; } /* ここを狭く */
+            .col-event { width: auto; text-align: left; } 
+            .col-subj, .col-dismiss { width: 32px; font-size: 8pt; }
 
             .event-input, .dismissal-input { border: none !important; font-size: 8.5pt; }
-            #belongings { border: 0.5pt solid black !important; height: 50px !important; margin-top: 2px; }
+            #belongings { border: 0.5pt solid black !important; height: 45px !important; margin-top: 2px; }
             #tableTitle { font-size: 16pt !important; margin: 0 0 2px 0 !important; }
         }
     </style>
@@ -66,12 +67,12 @@
             <input id="teacher" placeholder="担任名" onchange="renderAll()">
             <select id="grade" onchange="renderAll()"><option>1年</option><option>2年</option><option>3年</option><option>4年</option><option selected>5年</option><option>6年</option></select>
             <button class="btn-sync" onclick="loadFromCloud()">最新に更新</button>
-            <button class="btn-print" onclick="window.print()">印刷用画面</button>
+            <button class="btn-print" onclick="window.print()">予定表（月案）を印刷</button>
         </div>
     </div>
 
     <div class="card no-print">
-        <h2>時間割（週案反映用）</h2>
+        <h2>固定時間割設定（縦：校時 / 横：曜日）</h2>
         <div id="editorArea" style="overflow-x:auto;"></div>
         <button style="background: var(--primary); margin-top:10px;" onclick="saveConfig()">時間割を保存</button>
     </div>
@@ -85,8 +86,8 @@
         <div id="tableArea"></div>
         <div style="margin-top:5px; border: 1pt solid black; padding: 4px;">
             <div id="unitSummaryArea" style="font-size: 8pt; margin-bottom: 2px;"></div>
-            <div style="font-weight:bold; font-size: 9pt;">【連絡事項】</div>
-            <textarea id="belongings" style="width:100%; border:none; outline:none; height:60px; font-size: 10pt;" onchange="saveMonthlyData()"></textarea>
+            <div style="font-weight:bold; font-size: 9pt;">【連絡事項・持ち物】</div>
+            <textarea id="belongings" style="width:100%; border:none; outline:none; height:50px; font-size: 10pt;" onchange="saveMonthlyData()"></textarea>
         </div>
     </div>
 </div>
@@ -97,7 +98,8 @@ const SUPABASE_KEY = 'sb_publishable_pexunuSRbbG_3GgfTUovTA_i7iwAHG0';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const subjects = ["国語","算数","理科","社会","体育","音楽","図工","家庭","外国語","総合","学活","道徳"];
-const weeks = ["日","月","火","水","木","金","土"];
+const weekDays = ["月","火","水","木","金"];
+const weekFull = ["日","月","火","水","木","金","土"];
 const subColors = { "国語": "#fee2e2", "算数": "#e0f2fe", "理科": "#dcfce7", "社会": "#fef3c7", "体育": "#e0f7fa", "音楽": "#fff9c4", "図工": "#f3e8ff" };
 
 let currentUser = null;
@@ -106,19 +108,14 @@ let state = {
     plan: { events: {}, dismissals: {}, belongings: "" }
 };
 
-// --- 初期化 ---
 window.onload = async () => {
-    // ローカルから仮読み込みして描画（真っ白防止）
     const local = localStorage.getItem('last_state');
     if(local) state = JSON.parse(local);
     renderAll();
     
     const { data: { session } } = await _supabase.auth.getSession();
-    if (session) {
-        setupUser(session.user);
-    } else {
-        document.getElementById("syncIndicator").innerText = "ゲストモード（保存されません）";
-    }
+    if (session) setupUser(session.user);
+    else document.getElementById("syncIndicator").innerText = "ゲストモード";
 };
 
 async function setupUser(user) {
@@ -132,7 +129,6 @@ async function setupUser(user) {
 async function loadFromCloud() {
     if (!currentUser) return;
     document.getElementById("syncIndicator").innerText = "同期中...";
-    
     const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
     
     const [{ data: conf }, { data: plans }] = await Promise.all([
@@ -149,7 +145,6 @@ async function loadFromCloud() {
     document.getElementById("syncIndicator").innerText = "クラウドと同期済み";
 }
 
-// --- 描画 ---
 function renderAll() {
     const y = document.getElementById("year").value;
     const m = document.getElementById("month").value;
@@ -160,23 +155,23 @@ function renderAll() {
     document.getElementById("tableTitle").innerText = `${y}年度 ${m}月 学習予定表`;
     document.getElementById("belongings").value = state.plan.belongings || "";
 
-    // 時間割エディタ
-    let edHtml = `<table><tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>`;
-    ["月","火","水","木","金"].forEach(day => {
-        edHtml += `<tr><th>${day}</th>`;
-        for(let i=0; i<6; i++) {
+    // --- エディタ描画（縦：時間、横：曜日） ---
+    let edHtml = `<table><tr><th>校時</th>${weekDays.map(d => `<th>${d}</th>`).join('')}</tr>`;
+    for(let i=0; i<6; i++) {
+        edHtml += `<tr><th>${i+1}</th>`;
+        weekDays.forEach(day => {
             const s = state.weeklyConfig[day][i];
             edHtml += `<td style="background:${subColors[s]||'#fff'}"><select onchange="state.weeklyConfig['${day}'][${i}]=this.value;renderAll();" style="width:100%; border:none; background:transparent;">`;
             edHtml += `<option value=""></option>${subjects.map(sub=>`<option value="${sub}" ${s===sub?'selected':''}>${sub}</option>`).join('')}</select></td>`;
-        }
+        });
         edHtml += `</tr>`;
-    });
+    }
     document.getElementById("editorArea").innerHTML = edHtml + `</table>`;
 
-    // 本表
+    // --- 本表描画 ---
     let html = `<table><thead><tr><th class="col-date">日</th><th class="col-day">曜</th><th class="col-event">行事・予定</th><th class="col-subj">1</th><th class="col-subj">2</th><th class="col-subj">3</th><th class="col-subj">4</th><th class="col-subj">5</th><th class="col-subj">6</th><th class="col-dismiss">下校</th></tr></thead><tbody>`;
     for(let d=1; d<=lastDay; d++) {
-        const w = weeks[new Date(y, m-1, d).getDay()];
+        const w = weekFull[new Date(y, m-1, d).getDay()];
         const dayConfig = state.weeklyConfig[w] || ["","","","","",""];
         html += `<tr><td>${d}</td><td class="${w==='土'?'sat':w==='日'?'sun':''}">${w}</td>
         <td class="col-event"><input class="event-input" value="${state.plan.events?.[d]||''}" onchange="updatePlan(${d},'event',this.value)"></td>
@@ -186,11 +181,10 @@ function renderAll() {
     document.getElementById("tableArea").innerHTML = html + `</tbody></table>`;
 }
 
-// --- 保存系 ---
 async function saveConfig() {
     if (!currentUser) return alert("ログインしてください");
-    const { error } = await _supabase.from('weekly_configs').upsert({ user_id: currentUser.id, config: state.weeklyConfig });
-    if (!error) alert("保存完了");
+    await _supabase.from('weekly_configs').upsert({ user_id: currentUser.id, config: state.weeklyConfig });
+    alert("保存完了");
 }
 
 async function updatePlan(day, type, val) {
@@ -203,12 +197,8 @@ async function saveMonthlyData() {
     state.plan.belongings = document.getElementById("belongings").value;
     if (!currentUser) return;
     const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
-    const { error } = await _supabase.from('monthly_plans').upsert({ 
-        user_id: currentUser.id, 
-        year_month: ym, 
-        data: state.plan 
-    });
-    if (!error) document.getElementById("syncIndicator").innerText = "保存済み(" + new Date().toLocaleTimeString() + ")";
+    await _supabase.from('monthly_plans').upsert({ user_id: currentUser.id, year_month: ym, data: state.plan });
+    document.getElementById("syncIndicator").innerText = "保存済み(" + new Date().toLocaleTimeString() + ")";
 }
 
 async function handleAuth() {
@@ -220,9 +210,7 @@ async function handleAuth() {
         const { error: se } = await _supabase.auth.signUp({ email, password });
         if (se) alert("認証エラー: " + se.message);
         else alert("登録完了。再度ログインしてください");
-    } else {
-        location.reload();
-    }
+    } else location.reload();
 }
 </script>
 </body>
