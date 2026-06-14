@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>所見作成・カスタマイズ版（CROWN Jr.・光村国語対応）</title>
+    <title>所見作成・カスタマイズ版（CROWN Jr.・光村国語・行動の記録対応）</title>
     <style>
         body { font-family: -apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif; padding: 15px; background-color: #f0f2f5; color: #333; }
         .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -41,19 +41,19 @@
             <option value="5">第5学年</option>
         </select>
 
-        <label>2. 教科：</label>
+        <label>2. 分野・教科：</label>
         <select id="subject" onchange="updateUnits()">
+            <option value="生活面">生活・行動（行動の記録）</option>
             <option value="国語">国語（光村）</option>
             <option value="外国語">外国語（CROWN Jr.）</option>
             <option value="算数">算数（東書）</option>
             <option value="社会">社会（東書）</option>
             <option value="理科">理科（東書）</option>
             <option value="道徳">道徳（東書）</option>
-            <option value="生活面">生活・行動</option>
             <option value="行事">学校行事</option>
         </select>
 
-        <label>3. 単元名：</label>
+        <label>3. 項目・単元名：</label>
         <select id="unit"></select>
 
         <label>4. 視点：</label>
@@ -63,8 +63,8 @@
         </div>
 
         <label>5. 役割・具体的な様子：</label>
-        <input type="text" id="role" placeholder="例：グループリーダー、司会、聞き手">
-        <textarea id="episode" placeholder="例：話せない友だちに『Do you like ~?』と優しく声をかけていた。間違いを恐れず何度も発音を練習していた。" style="height: 100px;"></textarea>
+        <input type="text" id="role" placeholder="例：掃除当番、給食係、話し合いの司会">
+        <textarea id="episode" placeholder="例：誰も見ていないところでも黙々と床を磨いていた。友達の意見を最後まで否定せずに聞き、折り合いをつけていた。" style="height: 100px;"></textarea>
 
         <div class="btn-group">
             <button class="btn-blue" onclick="generate()">簡易作成（定型文）</button>
@@ -112,6 +112,18 @@
 <script>
 // 初期データ
 const defaultData = [
+    // 生活・行動（行動の記録：PDF資料 第5学年及び第6学年より抜粋）
+    { g: "all", s: "生活面", u: "基本的な生活習慣", goal: "自他の安全に努め、礼儀正しく行動し、節度を守り節制に心掛ける態度" },
+    { g: "all", s: "生活面", u: "健康・体力の向上", goal: "心身の健康の保持増進と体力の向上に努め、元気に生活する態度" },
+    { g: "all", s: "生活面", u: "自主・自律", goal: "夢や希望をもってより高い目標を立て、当面の課題に根気強く取り組み、努力する態度" },
+    { g: "all", s: "生活面", u: "責任感", goal: "自分の役割と責任を自覚し、信頼される行動をする態度" },
+    { g: "all", s: "生活面", u: "創意工夫", goal: "進んで新しい考えや方法を求め、工夫して生活をよりよくしようとする態度" },
+    { g: "all", s: "生活面", u: "思いやり・協力", goal: "思いやりと感謝の心をもち、異なる意見や立場を尊重し、力を合わせて集団生活の向上に努める態度" },
+    { g: "all", s: "生活面", u: "生命尊重・自然愛護", goal: "自然を愛護し、自他の生命を大切にする態度" },
+    { g: "all", s: "生活面", u: "勤労・奉仕", goal: "働くことの意義を理解し、人や社会の役に立つことを考え、進んで仕事や奉仕活動をする態度" },
+    { g: "all", s: "生活面", u: "公正・公平", goal: "だれに対しても差別をすることや偏見をもつことなく、正義を大切にし、公正・公平に行動する態度" },
+    { g: "all", s: "生活面", u: "公共心・公徳心", goal: "規則を尊重し、公徳を大切にするとともに、郷土や我が国の文化や伝統を大切にし、学校や人々の役に立つことを進んで行う態度" },
+
     // 5年生 国語 (光村 令和6年度版)
     { g: "5", s: "国語", u: "なまえつけてよ", goal: "登場人物同士の関わり方や心情の変化を捉えて読み、感想を交流する能力" },
     { g: "5", s: "国語", u: "言葉で伝え合おう（見立てる）", goal: "事例と主張の関係を整理し、筆者の説明の仕方の工夫を捉える能力" },
@@ -162,8 +174,8 @@ const defaultData = [
     { g: "6", s: "外国語", u: "L7 I want to join the brass band.", goal: "中学校で力を入れたい教科や部活動、送りたい学校生活について伝え合い、話し合う能力" },
 
     // 共通
-    { g: "all", s: "生活面", u: "責任感", goal: "自分の役割を自覚し最後までやり遂げる態度" },
-    { g: "all", s: "行事", u: "運動会", goal: "目標に向かって協力し、粘り強く取り組む態度" }
+    { g: "all", s: "行事", u: "運動会", goal: "目標に向かって協力し、粘り強く取り組む態度" },
+    { g: "all", s: "行事", u: "校外学習", goal: "公共の場のルールを守り、集団で協力して見学する態度" }
 ];
 
 let customData = JSON.parse(localStorage.getItem('myCustomUnits')) || [];
@@ -215,9 +227,16 @@ function generate() {
     const role = document.getElementById('role').value;
     const epi = document.getElementById('episode').value;
 
-    const subName = (sub === "生活面" || sub === "行事") ? "" : sub + "科";
-    const header = subName ? `${subName}の「${unit}」の学習では、` : `「${unit}」では、`;
-    const body = `${goal}において優れた姿が見られました。${role ? role + 'として活躍し、' : ''}${epi ? epi : '粘り強く取り組む'}姿が印象的でした。`;
+    let header = "";
+    if (sub === "生活面") {
+        header = `生活面においては、「${unit}」の視点から、`;
+    } else if (sub === "行事") {
+        header = `「${unit}」では、`;
+    } else {
+        header = `${sub}科の「${unit}」の学習では、`;
+    }
+
+    const body = `${goal}において優れた姿が見られました。${role ? role + 'として活躍し、' : ''}${epi ? epi : '主体的に取り組む'}姿が印象的でした。`;
     
     document.getElementById('result-text').textContent = header + body;
     document.getElementById('result-area').style.display = 'block';
@@ -232,14 +251,22 @@ function generatePrompt() {
     const goal = allData.find(d => d.u === unit)?.goal || "";
     const role = document.getElementById('role').value;
     const epi = document.getElementById('episode').value;
-    const subName = (sub === "生活面" || sub === "行事") ? "" : sub + "科";
+
+    let startPhrase = "";
+    if (sub === "生活面") {
+        startPhrase = `生活面においては、「${unit}」の視点から、`;
+    } else if (sub === "行事") {
+        startPhrase = `「${unit}」では、`;
+    } else {
+        startPhrase = `${sub}科の「${unit}」の学習では、`;
+    }
 
     const prompt = `あなたは熟練の小学校教師（視点：${persona}）です。
 以下の条件で、通知表の所見文を1つ作成してください。
 
 【構成案】
-1. 文頭は必ず『${subName ? subName + "の「" + unit + "」の学習では、" : "「" + unit + "」では、"}』で始めてください。
-2. 指導要領のねらい（${goal}）に対する児童の到達度を記述してください。
+1. 文頭は必ず『${startPhrase}』で始めてください。
+2. ${sub === "生活面" ? "評価項目の趣旨" : "指導要領のねらい"}（${goal}）に対する児童の到達度を記述してください。
 3. 児童の具体的な様子（役割：${role || '特になし'}、エピソード：${epi || '意欲的に取り組む姿'}）を、単なる事実の羅列ではなく、教室内での情景や発言が目に浮かぶように具体的に膨らませて書いてください。
 4. その行動が、本人の成長や周囲にどのような良い影響を与えたかという視点を一文添えてください。
 
