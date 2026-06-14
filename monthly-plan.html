@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>月案・週案メーカー Pro - バランス調整版</title>
+    <title>月案・週案メーカー Pro - 完全版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* --- 基本デザイン --- */
@@ -20,6 +20,8 @@
         .btn-top { background: #475569; }
         .btn-auth { background: #1e293b; border: 1px solid #475569; }
         .btn-primary { background: var(--primary); }
+        .btn-sync { background: #f59e0b; } 
+        .btn-weekly { background: var(--accent); } 
         .btn-print { background: var(--success); }
         
         table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
@@ -29,6 +31,9 @@
         .event-input, .dismissal-input { width: 100%; border: 1px solid #eee; text-align: left; padding: 2px; font-family: inherit; box-sizing: border-box; }
 
         /* --- 印刷設定 --- */
+        .no-print { display: block; }
+        .print-only { display: none; }
+
         @media print {
             @page { size: A4 portrait; margin: 8mm 6mm; }
             body { background: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -36,29 +41,27 @@
             .container { max-width: 100%; padding: 0; margin: 0; }
             .card.print-target { box-shadow: none; padding: 0; margin: 0; display: block !important; width: 100%; border: none; }
             
-            /* 月案テーブル：1枚に収めるための縦幅調整 */
+            /* 月案テーブル：1枚に収めるための調整 */
             #tableArea table { border: 1.2pt solid black !important; table-layout: fixed; width: 100%; font-size: 8.5pt; }
             #tableArea th, #tableArea td { 
                 border: 0.5pt solid black !important; 
                 padding: 0 1px !important; 
-                height: 20px; /* 31日分 + ヘッダーを1枚に収める高さ */
-                line-height: 20px; 
+                height: 19.5px; /* 31日分を1枚に収める限界の高さ */
+                line-height: 19px; 
                 overflow: hidden;
-                white-space: nowrap;
             }
             
-            /* 列幅の黄金バランス */
-            .col-date { width: 28px; }
-            .col-day { width: 28px; }
-            .col-event { width: auto; text-align: left; padding-left: 5px !important; white-space: normal !important; line-height: 1.1 !important; }
-            .col-subj { width: 38px; font-size: 8pt; } /* 1-6時間目：小さく */
-            .col-dismiss { width: 38px; font-size: 8pt; } /* 下校時刻：小さく */
+            /* 各列の幅指定 */
+            .col-date { width: 25px; }
+            .col-day { width: 25px; }
+            .col-event { width: auto; text-align: left; padding-left: 4px !important; font-size: 8.5pt; }
+            .col-subj { width: 36px; font-size: 8pt; } /* 時間割列を小さく */
+            .col-dismiss { width: 36px; font-size: 8pt; } /* 下校列を小さく */
 
-            .event-input, .dismissal-input { border: none !important; background: transparent !important; font-size: 8.5pt; height: 19px; }
+            .event-input, .dismissal-input { border: none !important; background: transparent !important; font-size: 8.5pt; height: 18px; }
             .dismissal-input { text-align: center; }
             
-            /* フッターエリアのコンパクト化 */
-            #unitSummaryArea { font-size: 7.5pt !important; line-height: 1.2; margin-top: 2px; }
+            #unitSummaryArea { font-size: 7.5pt !important; line-height: 1.2; }
             #belongings { height: 50px !important; font-size: 9pt !important; border: 0.5pt solid black !important; margin-top: 2px; }
             #tableTitle { font-size: 16pt !important; margin: 0 0 2px 0 !important; }
         }
@@ -68,6 +71,7 @@
             body.printing-weekly #monthlyPrintSection { display: none !important; }
             body.printing-weekly #weeklyPrintSection { display: block !important; }
             body.printing-weekly @page { size: A4 landscape; margin: 5mm; }
+            body.printing-weekly table { font-size: 10pt; table-layout: auto; }
         }
     </style>
 </head>
@@ -96,12 +100,27 @@
     </div>
 
     <div class="card no-print">
-        <h2>② 印刷</h2>
-        <button class="btn-print" onclick="printMonthly()">月間予定表を印刷（A4縦1枚）</button>
+        <h2>② 印刷設定</h2>
+        <div style="display: flex; gap: 20px;">
+            <div style="flex: 1; border-right: 1px solid #eee; padding-right: 20px;">
+                <button class="btn-print" onclick="printMonthly()" style="width: 100%;">予定表（月案）を印刷</button>
+            </div>
+            <div style="flex: 1.5;">
+                週を選択: <select id="weekSelector" onchange="renderWeeklyPlan()">
+                    <option value="1">第1週</option><option value="2">第2週</option><option value="3">第3週</option><option value="4">第4週</option><option value="5">第5週</option>
+                </select>
+                <button class="btn-weekly" onclick="printWeekly()">週案を印刷</button>
+            </div>
+        </div>
     </div>
 
     <div class="card no-print">
-        <h2>③ 固定時間割（週案反映用）</h2>
+        <h2>③ 時数・進捗管理</h2>
+        <div id="summaryArea">読込中...</div>
+    </div>
+
+    <div class="card no-print">
+        <h2>④ 固定時間割</h2>
         <div id="editorArea" style="overflow-x:auto;"></div>
         <button class="btn-primary" onclick="saveWeeklyConfig()" style="margin-top:10px;">時間割を保存</button>
     </div>
@@ -116,15 +135,22 @@
         <div id="tableArea"></div>
         <div style="margin-top:5px; border: 0.8pt solid black; padding: 4px;">
             <strong style="font-size: 8.5pt;">【今月の学習単元】</strong>
-            <div id="unitSummaryArea"></div>
+            <div id="unitSummaryArea" style="font-size: 8pt; margin-top: 1px;"></div>
             <div style="margin-top:3px;"><strong style="font-size: 8.5pt;">【持ち物・連絡事項】</strong></div>
-            <textarea id="belongings" style="width:100%; border:none; outline:none; font-family: inherit;" onchange="saveMonthlyData()"></textarea>
+            <textarea id="belongings" style="width:100%; height:55px; border:none; outline:none; font-family: inherit; font-size: 10pt; line-height:1.3;" onchange="saveMonthlyData()"></textarea>
         </div>
+    </div>
+
+    <!-- 印刷用：週案 -->
+    <div id="weeklyPrintSection" class="card print-target print-only">
+        <h2 id="weeklyPrintTitle" style="text-align:center;">週指導計画</h2>
+        <div id="weeklyPrintTableArea"></div>
     </div>
 
 </div>
 
 <script>
+// --- Supabase設定 ---
 const SUPABASE_URL = 'https://klewsfgafeixuvghkkvi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_pexunuSRbbG_3GgfTUovTA_i7iwAHG0';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -137,13 +163,10 @@ function getSubjColor(s) { return subjectColors[s] || "transparent"; }
 
 let currentUser = null;
 let weeklyConfig = { "月":["","","","","",""], "火":["","","","","",""], "水":["","","","","",""], "木":["","","","","",""], "金":["","","","","",""] };
+let unitMaster = {};
 let allMonthlyPlans = [];
 
-function printMonthly() {
-    document.getElementById("mainBody").className = "printing-monthly";
-    window.print();
-}
-
+// --- 認証・データ処理 ---
 async function handleAuth() {
     const email = prompt("メールアドレス:");
     const password = prompt("パスワード:");
@@ -158,20 +181,78 @@ async function checkUser() {
     if (session) {
         currentUser = session.user;
         document.getElementById("userStatus").innerText = currentUser.email;
+        document.getElementById("authBtn").innerText = "ログアウト";
+        document.getElementById("authBtn").onclick = async () => { await _supabase.auth.signOut(); location.reload(); };
         loadAllData();
     }
 }
 
 async function loadAllData() {
     if(!currentUser) return;
+    const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
     try {
         const { data: conf } = await _supabase.from('weekly_configs').select('config').eq('user_id', currentUser.id).maybeSingle();
         if(conf) weeklyConfig = conf.config;
+        const { data: master } = await _supabase.from('unit_masters').select('master').eq('user_id', currentUser.id).maybeSingle();
+        if(master) unitMaster = master.master;
         const { data: plans } = await _supabase.from('monthly_plans').select('year_month, data').eq('user_id', currentUser.id);
         allMonthlyPlans = plans || [];
         renderEditor();
         createTable();
+        renderSummary();
+        renderWeeklyPlan();
     } catch (e) { console.error(e); }
+}
+
+function renderSummary() {
+    let html = `<table><tr><th>教科</th><th>今月</th><th>累計</th><th>単元進捗</th></tr>`;
+    const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
+    const plan = allMonthlyPlans.find(p => p.year_month === ym)?.data || { selectedUnits: {} };
+    const monthCounts = calculateMonthCounts(ym);
+    const yearlyCounts = calculateYearlyCounts();
+
+    subjects.forEach(s => {
+        const selected = plan.selectedUnits ? plan.selectedUnits[s] : "";
+        const masters = unitMaster[s] || [];
+        const unit = masters.find(u => u.name === selected);
+        const progress = unit ? Math.round((yearlyCounts[s] / unit.total) * 100) : 0;
+        let opts = `<option value="">--選択--</option>`;
+        masters.forEach(u => opts += `<option value="${u.name}" ${u.name===selected?'selected':''}>${u.name}</option>`);
+        html += `<tr style="background:${getSubjColor(s)}"><td>${s}</td><td>${monthCounts[s]}</td><td>${yearlyCounts[s]}</td>
+            <td><select onchange="saveSelectedUnit('${s}', this.value)" style="width:80px">${opts}</select>
+            <div style="background:#fff; height:5px;"><div style="background:green; width:${progress}%; height:100%;"></div></div></td></tr>`;
+    });
+    document.getElementById("summaryArea").innerHTML = html + `</table>`;
+}
+
+function calculateMonthCounts(ym) {
+    const counts = {}; subjects.forEach(s => counts[s] = 0);
+    const [y, m] = ym.split("-").map(Number);
+    const last = new Date(y, m, 0).getDate();
+    for(let d=1; d<=last; d++) {
+        const w = weeks[new Date(y, m-1, d).getDay()];
+        const dayPlan = weeklyConfig[w] || ["","","","","",""];
+        dayPlan.forEach(s => { if(s && counts.hasOwnProperty(s)) counts[s]++; });
+    }
+    return counts;
+}
+
+function calculateYearlyCounts() {
+    const total = {}; subjects.forEach(s => total[s] = 0);
+    allMonthlyPlans.forEach(p => {
+        const m = calculateMonthCounts(p.year_month);
+        subjects.forEach(s => total[s] += m[s]);
+    });
+    return total;
+}
+
+async function saveSelectedUnit(subj, unitName) {
+    const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
+    let plan = allMonthlyPlans.find(p => p.year_month === ym)?.data || { events: {}, dismissals: {}, belongings: "", selectedUnits: {} };
+    if(!plan.selectedUnits) plan.selectedUnits = {};
+    plan.selectedUnits[subj] = unitName;
+    await _supabase.from('monthly_plans').upsert({ user_id: currentUser.id, year_month: ym, data: plan });
+    loadAllData();
 }
 
 function renderEditor() {
@@ -179,9 +260,9 @@ function renderEditor() {
     ["月","火","水","木","金"].forEach(day => {
         html += `<tr><th>${day}</th>`;
         for(let i=0; i<6; i++) {
-            const s = weeklyConfig[day][i];
-            html += `<td style="background:${getSubjColor(s)}"><select id="sel-${day}-${i}" style="width:100%; border:none;" onchange="this.parentElement.style.backgroundColor=getSubjColor(this.value)"><option value=""></option>`;
-            subjects.forEach(sub => html += `<option value="${sub}" ${s===sub?'selected':''}>${sub}</option>`);
+            const currentSubj = weeklyConfig[day] ? weeklyConfig[day][i] : "";
+            html += `<td style="background:${getSubjColor(currentSubj)}"><select id="sel-${day}-${i}" style="width:100%; background:transparent; border:none;" onchange="this.parentElement.style.backgroundColor=getSubjColor(this.value)"><option value=""></option>`;
+            subjects.forEach(s => html += `<option value="${s}" ${currentSubj===s?'selected':''}>${s}</option>`);
             html += `</select></td>`;
         }
         html += `</tr>`;
@@ -221,6 +302,10 @@ function createTable() {
         </tr>`;
     }
     document.getElementById("tableArea").innerHTML = html + `</tbody></table>`;
+
+    let unitSum = "";
+    subjects.forEach(s => { if(plan.selectedUnits && plan.selectedUnits[s]) unitSum += `<span style="background:${getSubjColor(s)}; padding:1px 3px; margin:1px; border-radius:2px; border:0.1pt solid #999;">【${s}】${plan.selectedUnits[s]} </span>`; });
+    document.getElementById("unitSummaryArea").innerHTML = unitSum;
 }
 
 async function saveWeeklyConfig() {
@@ -230,7 +315,7 @@ async function saveWeeklyConfig() {
     });
     await _supabase.from('weekly_configs').upsert({ user_id: currentUser.id, config: weeklyConfig });
     alert("保存完了");
-    createTable();
+    loadAllData();
 }
 
 async function saveMonthlyData() {
@@ -239,13 +324,20 @@ async function saveMonthlyData() {
     document.querySelectorAll(".event-input").forEach(inp => events[inp.dataset.day] = inp.value);
     document.querySelectorAll(".dismissal-input").forEach(inp => dismissals[inp.dataset.day] = inp.value);
     const belongings = document.getElementById("belongings").value;
-    const old = allMonthlyPlans.find(p => p.year_month === ym)?.data || {};
+    const old = allMonthlyPlans.find(p => p.year_month === ym)?.data || { selectedUnits: {} };
     const newData = { ...old, events, dismissals, belongings };
     await _supabase.from('monthly_plans').upsert({ user_id: currentUser.id, year_month: ym, data: newData });
 }
 
-checkUser();
-createTable();
-</script>
-</body>
-</html>
+function renderWeeklyPlan() {
+    const year = Number(document.getElementById("year").value);
+    const month = Number(document.getElementById("month").value);
+    const weekNum = Number(document.getElementById("weekSelector").value);
+    const ym = `${year}-${month}`;
+    const plan = allMonthlyPlans.find(p => p.year_month === ym)?.data || { events: {} };
+    const days = [];
+    const firstDay = new Date(year, month-1, 1).getDay();
+    let start = 1 + (weekNum - 1) * 7 - firstDay + 1;
+    for(let i=0; i<7; i++) { let d = start+i; if(d>0 && d<=new Date(year, month, 0).getDate()) days.push(d); }
+    let table = `<table><tr><th>校時</th>`;
+    days.forEach(d => table +
