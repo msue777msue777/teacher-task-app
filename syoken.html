@@ -63,11 +63,11 @@
         </div>
 
         <label>5. 役割・具体的な様子：</label>
-        <input type="text" id="role" placeholder="例：班長、応援団員">
-        <textarea id="episode" placeholder="例：進んで発表した。友達を助けた。" style="height: 70px;"></textarea>
+        <input type="text" id="role" placeholder="例：グループリーダー、司会、聞き手">
+        <textarea id="episode" placeholder="例：話せない友だちに『Do you like ~?』と優しく声をかけていた。間違いを恐れず何度も発音を練習していた。" style="height: 100px;"></textarea>
 
         <div class="btn-group">
-            <button class="btn-blue" onclick="generate()">簡易作成</button>
+            <button class="btn-blue" onclick="generate()">簡易作成（定型文）</button>
             <button class="btn-green" onclick="generatePrompt()">AI用プロンプト作成</button>
         </div>
 
@@ -214,10 +214,20 @@ function generatePrompt() {
     const epi = document.getElementById('episode').value;
     const subName = (sub === "生活面" || sub === "行事") ? "" : sub + "科";
 
+    // プロンプトをより具体的に修正
     const prompt = `あなたは熟練の小学校教師（視点：${persona}）です。
-文頭を『${subName ? subName + "の「" + unit + "」の学習では、" : "「" + unit + "」では、"}』で始め、
-指導要領のねらい（${goal}）と、児童の具体的な様子（${role}、${epi}）を組み合わせて、
-前向きで温かい通知表所見を150文字程度で作成してください。`;
+以下の条件で、通知表の所見文を1つ作成してください。
+
+【構成案】
+1. 文頭は必ず『${subName ? subName + "の「" + unit + "」の学習では、" : "「" + unit + "」では、"}』で始めてください。
+2. 指導要領のねらい（${goal}）に対する児童の到達度を記述してください。
+3. 児童の具体的な様子（役割：${role || '特になし'}、エピソード：${epi || '意欲的に取り組む姿'}）を、単なる事実の羅列ではなく、教室内での情景や発言が目に浮かぶように具体的に膨らませて書いてください。
+4. その行動が、本人の成長や周囲にどのような良い影響を与えたかという視点を一文添えてください。
+
+【文体・文字数】
+・保護者に伝わる、前向きで温かい表現を用いること。
+・「〜を調整しながら」「〜のよさを生かして」など、教育的な語彙を適切に混ぜること。
+・全体で150文字〜200文字程度にまとめること。`;
 
     document.getElementById('prompt-text').textContent = prompt;
     document.getElementById('prompt-area').style.display = 'block';
