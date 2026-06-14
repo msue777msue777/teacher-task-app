@@ -9,31 +9,33 @@
 </head>
 <body class="bg-slate-50 p-2">
 
-    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden">
+    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-slate-200">
         <!-- ヘッダー -->
         <div class="bg-emerald-700 p-4 flex flex-col md:flex-row justify-between items-center text-white gap-4">
             <div>
-                <h1 class="text-xl font-bold">5月 週案・時数管理</h1>
-                <p id="save-status" class="text-[10px] opacity-80">接続済み</p>
+                <h1 class="text-xl font-bold flex items-center">
+                    <span class="mr-2">🗓️</span> 5月 週案・時数管理
+                </h1>
+                <div id="save-status" class="text-[10px] bg-emerald-800 px-2 py-0.5 rounded-full inline-block mt-1">接続済み</div>
             </div>
             
-            <!-- 週切り替えボタン -->
-            <div class="flex items-center bg-emerald-800 rounded-lg p-1">
-                <button onclick="changeWeek(-7)" class="px-3 py-1 hover:bg-emerald-600 rounded">◀ 前の週</button>
-                <span id="current-week-label" class="px-4 text-sm font-bold border-x border-emerald-600">5月11日週</span>
-                <button onclick="changeWeek(7)" class="px-3 py-1 hover:bg-emerald-600 rounded">次の週 ▶</button>
+            <!-- 週切り替え -->
+            <div class="flex items-center bg-white/10 rounded-lg p-1 border border-white/20">
+                <button onclick="changeWeek(-7)" class="px-3 py-1 hover:bg-white/10 rounded transition text-sm">◀ 前週</button>
+                <span id="current-week-label" class="px-4 text-sm font-bold border-x border-white/20 min-w-[100px] text-center">5月11日週</span>
+                <button onclick="changeWeek(7)" class="px-3 py-1 hover:bg-white/10 rounded transition text-sm">次週 ▶</button>
             </div>
 
-            <a href="index.html" class="bg-emerald-600 px-4 py-2 rounded shadow-sm text-sm hover:bg-emerald-500 text-center w-full md:w-auto">戻る</a>
+            <a href="index.html" class="bg-white/10 px-4 py-2 rounded text-sm hover:bg-white/20 transition border border-white/20">メニューへ戻る</a>
         </div>
 
         <!-- 週案テーブル -->
         <div class="overflow-x-auto p-2">
-            <table class="w-full border-collapse border border-gray-300">
+            <table class="w-full border-collapse border border-slate-300 table-fixed">
                 <thead>
-                    <tr id="table-header" class="bg-gray-100 text-[10px] md:text-xs text-gray-600">
-                        <th class="border border-gray-300 p-2 w-12">校時</th>
-                        <!-- JSで日付が入ります -->
+                    <tr id="table-header" class="bg-slate-100 text-[10px] md:text-xs text-slate-500 uppercase tracking-wider">
+                        <th class="border border-slate-300 p-2 w-10">校時</th>
+                        <!-- JSで日付生成 -->
                     </tr>
                 </thead>
                 <tbody id="schedule-body">
@@ -43,10 +45,10 @@
         </div>
 
         <!-- 時数集計 -->
-        <div class="bg-slate-100 p-4 md:p-6 border-t border-slate-200">
-            <h2 class="text-sm font-bold mb-4 text-slate-600 flex items-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                5月の実施時数状況（月間累計）
+        <div class="bg-slate-50 p-4 md:p-6 border-t border-slate-200">
+            <h2 class="text-xs font-bold mb-4 text-slate-500 uppercase tracking-widest flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                5月の累計時数進捗
             </h2>
             <div id="summary-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <!-- JSで動的に生成 -->
@@ -59,35 +61,36 @@
         const SUPABASE_KEY = 'sb_publishable_pexunuSRbbG_3GgfTUovTA_i7iwAHG0';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 表示の基準となる月曜日
         let currentMonday = new Date('2026-05-11'); 
         const periods = [1, 2, 3, 4, 5, 6];
         let subjects = [];
+        let units = [];
 
         async function init() {
             try {
-                const [{ data: subData }, { data: plans }] = await Promise.all([
+                // 教科、単元、目標時数を一括取得
+                const [{ data: subData }, { data: unitData }, { data: plans }] = await Promise.all([
                     _supabase.from('subjects').select('*').order('display_order'),
+                    _supabase.from('units').select('*'),
                     _supabase.from('yearly_plans').select('*').eq('month', 5)
                 ]);
                 subjects = subData || [];
-                window.plans = plans || []; // 計画をグローバルに保存
+                units = unitData || [];
+                window.plans = plans || [];
                 await refreshData();
             } catch (e) {
                 document.getElementById('save-status').innerText = '接続エラー';
             }
         }
 
-        // 週を切り替える関数
         async function changeWeek(daysOffset) {
             currentMonday.setDate(currentMonday.getDate() + daysOffset);
             await refreshData();
         }
 
-        // データを再読み込みして画面を更新
         async function refreshData() {
             const statusEl = document.getElementById('save-status');
-            statusEl.innerText = '読み込み中...';
+            statusEl.innerText = '更新中...';
             
             const { data: schData } = await _supabase.from('schedules').select('*');
             
@@ -110,9 +113,9 @@
         function renderTableHeader(weekDays) {
             const header = document.getElementById('table-header');
             const dayNames = ["月", "火", "水", "木", "金"];
-            header.innerHTML = '<th class="border border-gray-300 p-2 w-12">校時</th>';
+            header.innerHTML = '<th class="border border-slate-300 p-2 w-10"></th>';
             weekDays.forEach((date, i) => {
-                header.innerHTML += `<th class="border border-gray-300 p-2">${date.split('-')[2]}日(${dayNames[i]})</th>`;
+                header.innerHTML += `<th class="border border-slate-300 p-1 md:p-2 text-center font-bold">${date.split('-')[2]}<span class="block md:inline font-normal opacity-60 text-[9px]">(${dayNames[i]})</span></th>`;
             });
         }
 
@@ -122,21 +125,29 @@
 
             periods.forEach(p => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="border border-gray-300 p-2 bg-gray-50 text-center font-bold text-gray-400 text-xs">${p}</td>`;
+                tr.innerHTML = `<td class="border border-slate-200 p-2 bg-slate-50 text-center font-bold text-slate-400 text-[10px]">${p}</td>`;
                 
                 weekDays.forEach(dateStr => {
                     const cellData = savedData.find(d => d.date === dateStr && d.period === p);
                     const td = document.createElement('td');
-                    td.className = "border border-gray-300 p-1 h-28 align-top hover:bg-emerald-50 transition-colors";
+                    td.className = "border border-slate-200 p-1 h-32 align-top transition-colors";
                     
-                    const options = subjects.map(s => `<option value="${s.id}" ${cellData?.subject_id === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
+                    const subOptions = subjects.map(s => `<option value="${s.id}" ${cellData?.subject_id === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
                     
+                    // その教科に属する単元のみフィルタリング
+                    const filteredUnits = units.filter(u => u.subject_id === cellData?.subject_id);
+                    const unitOptions = filteredUnits.map(u => `<option value="${u.id}" ${cellData?.unit_id === u.id ? 'selected' : ''}>${u.unit_name}</option>`).join('');
+
                     td.innerHTML = `
-                        <select onchange="save('${dateStr}', ${p}, this.value)" class="w-full text-[10px] md:text-xs font-bold bg-transparent mb-1 outline-none appearance-none cursor-pointer text-emerald-800">
-                            <option value="">-- 教科 --</option>
-                            ${options}
+                        <select onchange="save('${dateStr}', ${p}, this.value)" class="w-full text-xs font-bold bg-transparent mb-1 text-emerald-800 outline-none">
+                            <option value="">--教科--</option>
+                            ${subOptions}
                         </select>
-                        <textarea onblur="updateMemo('${dateStr}', ${p}, this.value)" class="w-full text-[10px] leading-tight h-16 bg-transparent border-none resize-none outline-none focus:bg-white p-1 rounded font-sans" placeholder="内容...">${cellData?.memo || ''}</textarea>
+                        <select onchange="saveUnit('${dateStr}', ${p}, this.value)" class="w-full text-[9px] bg-emerald-50 text-emerald-600 mb-1 rounded p-0.5 outline-none ${!cellData?.subject_id ? 'hidden' : ''}">
+                            <option value="">--単元を選択--</option>
+                            ${unitOptions}
+                        </select>
+                        <textarea onblur="updateMemo('${dateStr}', ${p}, this.value)" class="w-full text-[9px] leading-tight h-16 bg-transparent border-none resize-none outline-none focus:bg-white p-1 rounded font-sans" placeholder="備考...">${cellData?.memo || ''}</textarea>
                     `;
                     tr.appendChild(td);
                 });
@@ -145,20 +156,26 @@
         }
 
         async function save(date, period, subjectId) {
-            document.getElementById('save-status').innerText = '保存中...';
             await _supabase.from('schedules').upsert({
                 date: date,
                 period: period,
-                subject_id: subjectId ? parseInt(subjectId) : null
+                subject_id: subjectId ? parseInt(subjectId) : null,
+                unit_id: null // 教科が変わったら単元はリセット
             }, { onConflict: 'date,period' });
             await refreshData();
         }
 
+        async function saveUnit(date, period, unitId) {
+            await _supabase.from('schedules').upsert({
+                date: date, period: period,
+                unit_id: unitId ? parseInt(unitId) : null
+            }, { onConflict: 'date,period' });
+            document.getElementById('save-status').innerText = '単元保存完了';
+        }
+
         async function updateMemo(date, period, memo) {
             await _supabase.from('schedules').upsert({
-                date: date,
-                period: period,
-                memo: memo
+                date: date, period: period, memo: memo
             }, { onConflict: 'date,period' });
         }
 
@@ -170,16 +187,15 @@
                 const plan = plans.find(p => p.subject_id === s.id)?.planned_hours || 0;
                 const percent = Math.min((actual / (plan || 1)) * 100, 100);
                 
-                const card = document.createElement('div');
-                card.className = "bg-white border border-slate-200 p-2 rounded shadow-sm";
-                card.innerHTML = `
-                    <div class="text-[10px] text-slate-400 font-bold mb-1">${s.name}</div>
-                    <div class="text-sm font-black text-slate-700">${actual} <span class="text-[10px] font-normal text-slate-400">/ ${plan}</span></div>
-                    <div class="w-full bg-slate-100 h-1 mt-1 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${percent}%"></div>
+                container.innerHTML += `
+                    <div class="bg-white border border-slate-200 p-2 rounded shadow-sm">
+                        <div class="text-[9px] text-slate-400 font-bold mb-1">${s.name}</div>
+                        <div class="text-xs font-black text-slate-700">${actual} <span class="text-[9px] font-normal text-slate-400">/ ${plan}</span></div>
+                        <div class="w-full bg-slate-100 h-1 mt-1 rounded-full overflow-hidden">
+                            <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${percent}%"></div>
+                        </div>
                     </div>
                 `;
-                container.appendChild(card);
             });
         }
 
