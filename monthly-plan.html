@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>月案・週案メーカー Pro - レイアウト最適化版</title>
+    <title>月案・週案メーカー Pro - バランス調整版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* --- 基本デザイン --- */
@@ -20,8 +20,6 @@
         .btn-top { background: #475569; }
         .btn-auth { background: #1e293b; border: 1px solid #475569; }
         .btn-primary { background: var(--primary); }
-        .btn-sync { background: #f59e0b; } 
-        .btn-weekly { background: var(--accent); } 
         .btn-print { background: var(--success); }
         
         table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
@@ -31,33 +29,38 @@
         .event-input, .dismissal-input { width: 100%; border: 1px solid #eee; text-align: left; padding: 2px; font-family: inherit; box-sizing: border-box; }
 
         /* --- 印刷設定 --- */
-        .no-print { display: block; }
-        .print-only { display: none; }
-
         @media print {
-            @page { size: A4 portrait; margin: 6mm; }
+            @page { size: A4 portrait; margin: 8mm 6mm; }
             body { background: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print, header, .auth-bar, .card:not(.print-target) { display: none !important; }
             .container { max-width: 100%; padding: 0; margin: 0; }
             .card.print-target { box-shadow: none; padding: 0; margin: 0; display: block !important; width: 100%; border: none; }
             
-            /* 月案テーブルの調整 */
-            #tableArea table { border: 1.2pt solid black !important; table-layout: fixed; width: 100%; font-size: 8pt; }
-            #tableArea th, #tableArea td { border: 0.5pt solid black !important; padding: 1px !important; height: 17.5px; line-height: 1; }
+            /* 月案テーブル：1枚に収めるための縦幅調整 */
+            #tableArea table { border: 1.2pt solid black !important; table-layout: fixed; width: 100%; font-size: 8.5pt; }
+            #tableArea th, #tableArea td { 
+                border: 0.5pt solid black !important; 
+                padding: 0 1px !important; 
+                height: 20px; /* 31日分 + ヘッダーを1枚に収める高さ */
+                line-height: 20px; 
+                overflow: hidden;
+                white-space: nowrap;
+            }
             
-            /* 列幅の厳密な指定 */
-            .col-date { width: 22px; }
-            .col-day { width: 22px; }
-            .col-event { width: auto; text-align: left; padding-left: 3px !important; font-size: 8.5pt; }
-            .col-subj { width: 32px; font-size: 7.5pt; } /* 1-6時間目 */
-            .col-dismiss { width: 35px; font-size: 7.5pt; } /* 下校時刻 */
+            /* 列幅の黄金バランス */
+            .col-date { width: 28px; }
+            .col-day { width: 28px; }
+            .col-event { width: auto; text-align: left; padding-left: 5px !important; white-space: normal !important; line-height: 1.1 !important; }
+            .col-subj { width: 38px; font-size: 8pt; } /* 1-6時間目：小さく */
+            .col-dismiss { width: 38px; font-size: 8pt; } /* 下校時刻：小さく */
 
-            .event-input, .dismissal-input { border: none !important; background: transparent !important; font-size: 8.5pt; height: 100%; }
+            .event-input, .dismissal-input { border: none !important; background: transparent !important; font-size: 8.5pt; height: 19px; }
             .dismissal-input { text-align: center; }
             
-            #unitSummaryArea { font-size: 7.5pt !important; line-height: 1.2; }
-            #belongings { height: 55px !important; font-size: 9pt !important; border: 0.5pt solid black !important; margin-top: 2px; }
-            #tableTitle { font-size: 16pt !important; margin-bottom: 2px !important; }
+            /* フッターエリアのコンパクト化 */
+            #unitSummaryArea { font-size: 7.5pt !important; line-height: 1.2; margin-top: 2px; }
+            #belongings { height: 50px !important; font-size: 9pt !important; border: 0.5pt solid black !important; margin-top: 2px; }
+            #tableTitle { font-size: 16pt !important; margin: 0 0 2px 0 !important; }
         }
 
         /* 週案用 (横向き) */
@@ -65,7 +68,6 @@
             body.printing-weekly #monthlyPrintSection { display: none !important; }
             body.printing-weekly #weeklyPrintSection { display: block !important; }
             body.printing-weekly @page { size: A4 landscape; margin: 5mm; }
-            body.printing-weekly table { font-size: 10pt; table-layout: auto; }
         }
     </style>
 </head>
@@ -94,52 +96,30 @@
     </div>
 
     <div class="card no-print">
-        <h2>② 印刷設定</h2>
-        <div style="display: flex; gap: 20px;">
-            <div style="flex: 1; border-right: 1px solid #eee; padding-right: 20px;">
-                <button class="btn-print" onclick="printMonthly()" style="width: 100%;">予定表（月案）を印刷</button>
-                <p style="font-size: 11px; color: #666; margin-top: 5px;">※A4縦1枚に収まるよう自動調整されます</p>
-            </div>
-            <div style="flex: 1.5;">
-                週を選択: <select id="weekSelector" onchange="renderWeeklyPlan()">
-                    <option value="1">第1週</option><option value="2">第2週</option><option value="3">第3週</option><option value="4">第4週</option><option value="5">第5週</option>
-                </select>
-                <button class="btn-weekly" onclick="printWeekly()">選択した週案を印刷</button>
-            </div>
-        </div>
+        <h2>② 印刷</h2>
+        <button class="btn-print" onclick="printMonthly()">月間予定表を印刷（A4縦1枚）</button>
     </div>
 
     <div class="card no-print">
-        <h2>③ 時数・進捗管理</h2>
-        <div id="summaryArea">読込中...</div>
-    </div>
-
-    <div class="card no-print">
-        <h2>④ 固定時間割</h2>
+        <h2>③ 固定時間割（週案反映用）</h2>
         <div id="editorArea" style="overflow-x:auto;"></div>
         <button class="btn-primary" onclick="saveWeeklyConfig()" style="margin-top:10px;">時間割を保存</button>
     </div>
 
-    <!-- 印刷用：月案（予定表） -->
+    <!-- 印刷用：月案 -->
     <div class="card print-target" id="monthlyPrintSection">
-        <h2 id="tableTitle" style="text-align:center; font-size: 18pt; margin: 0 0 5px 0;">学習予定表</h2>
-        <div style="display:flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; font-size: 10pt;">
+        <h2 id="tableTitle" style="text-align:center;">学習予定表</h2>
+        <div style="display:flex; justify-content: space-between; margin-bottom: 2px; font-weight: bold; font-size: 10pt;">
             <div id="displayGrade">5年生</div>
             <div id="displayTeacher">担任：山田 太郎</div>
         </div>
         <div id="tableArea"></div>
-        <div style="margin-top:5px; border: 1pt solid black; padding: 4px;">
+        <div style="margin-top:5px; border: 0.8pt solid black; padding: 4px;">
             <strong style="font-size: 8.5pt;">【今月の学習単元】</strong>
-            <div id="unitSummaryArea" style="font-size: 8pt; margin-top: 1px;"></div>
+            <div id="unitSummaryArea"></div>
             <div style="margin-top:3px;"><strong style="font-size: 8.5pt;">【持ち物・連絡事項】</strong></div>
-            <textarea id="belongings" style="width:100%; height:60px; border:none; outline:none; font-family: inherit; font-size: 9.5pt; line-height:1.3;" onchange="saveMonthlyData()"></textarea>
+            <textarea id="belongings" style="width:100%; border:none; outline:none; font-family: inherit;" onchange="saveMonthlyData()"></textarea>
         </div>
-    </div>
-
-    <!-- 印刷用：週案 -->
-    <div id="weeklyPrintSection" class="card print-target print-only">
-        <h2 id="weeklyPrintTitle" style="text-align:center; margin: 0 0 10px 0; font-size: 18pt;">週指導計画</h2>
-        <div id="weeklyPrintTableArea"></div>
     </div>
 
 </div>
@@ -157,17 +137,10 @@ function getSubjColor(s) { return subjectColors[s] || "transparent"; }
 
 let currentUser = null;
 let weeklyConfig = { "月":["","","","","",""], "火":["","","","","",""], "水":["","","","","",""], "木":["","","","","",""], "金":["","","","","",""] };
-let unitMaster = {};
 let allMonthlyPlans = [];
 
 function printMonthly() {
     document.getElementById("mainBody").className = "printing-monthly";
-    window.print();
-}
-
-function printWeekly() {
-    renderWeeklyPlan();
-    document.getElementById("mainBody").className = "printing-weekly";
     window.print();
 }
 
@@ -185,78 +158,20 @@ async function checkUser() {
     if (session) {
         currentUser = session.user;
         document.getElementById("userStatus").innerText = currentUser.email;
-        document.getElementById("authBtn").innerText = "ログアウト";
-        document.getElementById("authBtn").onclick = async () => { await _supabase.auth.signOut(); location.reload(); };
         loadAllData();
     }
 }
 
 async function loadAllData() {
     if(!currentUser) return;
-    const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
     try {
         const { data: conf } = await _supabase.from('weekly_configs').select('config').eq('user_id', currentUser.id).maybeSingle();
         if(conf) weeklyConfig = conf.config;
-        const { data: master } = await _supabase.from('unit_masters').select('master').eq('user_id', currentUser.id).maybeSingle();
-        if(master) unitMaster = master.master;
         const { data: plans } = await _supabase.from('monthly_plans').select('year_month, data').eq('user_id', currentUser.id);
         allMonthlyPlans = plans || [];
         renderEditor();
         createTable();
-        renderSummary();
-        renderWeeklyPlan();
     } catch (e) { console.error(e); }
-}
-
-function renderSummary() {
-    let html = `<table><tr><th>教科</th><th>今月</th><th>累計</th><th>単元進捗</th></tr>`;
-    const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
-    const plan = allMonthlyPlans.find(p => p.year_month === ym)?.data || { selectedUnits: {} };
-    const monthCounts = calculateMonthCounts(ym);
-    const yearlyCounts = calculateYearlyCounts();
-
-    subjects.forEach(s => {
-        const selected = plan.selectedUnits ? plan.selectedUnits[s] : "";
-        const masters = unitMaster[s] || [];
-        const unit = masters.find(u => u.name === selected);
-        const progress = unit ? Math.round((yearlyCounts[s] / unit.total) * 100) : 0;
-        let opts = `<option value="">--選択--</option>`;
-        masters.forEach(u => opts += `<option value="${u.name}" ${u.name===selected?'selected':''}>${u.name}</option>`);
-        html += `<tr style="background:${getSubjColor(s)}"><td>${s}</td><td>${monthCounts[s]}</td><td>${yearlyCounts[s]}</td>
-            <td><select onchange="saveSelectedUnit('${s}', this.value)" style="width:80px">${opts}</select>
-            <div style="background:#fff; height:5px;"><div style="background:green; width:${progress}%; height:100%;"></div></div></td></tr>`;
-    });
-    document.getElementById("summaryArea").innerHTML = html + `</table>`;
-}
-
-function calculateMonthCounts(ym) {
-    const counts = {}; subjects.forEach(s => counts[s] = 0);
-    const [y, m] = ym.split("-").map(Number);
-    const last = new Date(y, m, 0).getDate();
-    for(let d=1; d<=last; d++) {
-        const w = weeks[new Date(y, m-1, d).getDay()];
-        const dayPlan = weeklyConfig[w] || ["","","","","",""];
-        dayPlan.forEach(s => { if(s && counts.hasOwnProperty(s)) counts[s]++; });
-    }
-    return counts;
-}
-
-function calculateYearlyCounts() {
-    const total = {}; subjects.forEach(s => total[s] = 0);
-    allMonthlyPlans.forEach(p => {
-        const m = calculateMonthCounts(p.year_month);
-        subjects.forEach(s => total[s] += m[s]);
-    });
-    return total;
-}
-
-async function saveSelectedUnit(subj, unitName) {
-    const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
-    let plan = allMonthlyPlans.find(p => p.year_month === ym)?.data || { events: {}, dismissals: {}, belongings: "", selectedUnits: {} };
-    if(!plan.selectedUnits) plan.selectedUnits = {};
-    plan.selectedUnits[subj] = unitName;
-    await _supabase.from('monthly_plans').upsert({ user_id: currentUser.id, year_month: ym, data: plan });
-    loadAllData();
 }
 
 function renderEditor() {
@@ -264,9 +179,9 @@ function renderEditor() {
     ["月","火","水","木","金"].forEach(day => {
         html += `<tr><th>${day}</th>`;
         for(let i=0; i<6; i++) {
-            const currentSubj = weeklyConfig[day] ? weeklyConfig[day][i] : "";
-            html += `<td style="background:${getSubjColor(currentSubj)}"><select id="sel-${day}-${i}" style="width:100%; background:transparent; border:none;" onchange="this.parentElement.style.backgroundColor=getSubjColor(this.value)"><option value=""></option>`;
-            subjects.forEach(s => html += `<option value="${s}" ${currentSubj===s?'selected':''}>${s}</option>`);
+            const s = weeklyConfig[day][i];
+            html += `<td style="background:${getSubjColor(s)}"><select id="sel-${day}-${i}" style="width:100%; border:none;" onchange="this.parentElement.style.backgroundColor=getSubjColor(this.value)"><option value=""></option>`;
+            subjects.forEach(sub => html += `<option value="${sub}" ${s===sub?'selected':''}>${sub}</option>`);
             html += `</select></td>`;
         }
         html += `</tr>`;
@@ -287,41 +202,25 @@ function createTable() {
     document.getElementById("belongings").value = plan.belongings || "";
 
     let html = `<table><thead><tr>
-        <th class="col-date">日</th>
-        <th class="col-day">曜</th>
+        <th class="col-date">日</th><th class="col-day">曜</th>
         <th class="col-event">行事・予定</th>
-        <th class="col-subj">1</th>
-        <th class="col-subj">2</th>
-        <th class="col-subj">3</th>
-        <th class="col-subj">4</th>
-        <th class="col-subj">5</th>
-        <th class="col-subj">6</th>
+        <th class="col-subj">1</th><th class="col-subj">2</th><th class="col-subj">3</th>
+        <th class="col-subj">4</th><th class="col-subj">5</th><th class="col-subj">6</th>
         <th class="col-dismiss">下校</th>
     </tr></thead><tbody>`;
 
     for(let d=1; d<=lastDay; d++) {
         const w = weeks[new Date(year, month-1, d).getDay()];
         const dayConfig = weeklyConfig[w] || ["","","","","",""];
-        const eventVal = (plan.events && plan.events[d]) ? plan.events[d] : '';
-        const dismissVal = (plan.dismissals && plan.dismissals[d]) ? plan.dismissals[d] : '';
-
         html += `<tr>
             <td class="col-date">${d}</td>
             <td class="col-day ${w==='土'?'sat':(w==='日'?'sun':'')}">${w}</td>
-            <td class="col-event"><input class="event-input" data-day="${d}" value="${eventVal}" onchange="saveMonthlyData()"></td>
+            <td class="col-event"><input class="event-input" data-day="${d}" value="${plan.events?.[d]||''}" onchange="saveMonthlyData()"></td>
             ${dayConfig.map(s => `<td class="col-subj" style="background:${getSubjColor(s)}">${s}</td>`).join('')}
-            <td class="col-dismiss"><input class="dismissal-input" data-day="${d}" value="${dismissVal}" onchange="saveMonthlyData()" placeholder="-"></td>
+            <td class="col-dismiss"><input class="dismissal-input" data-day="${d}" value="${plan.dismissals?.[d]||''}" onchange="saveMonthlyData()"></td>
         </tr>`;
     }
-    html += `</tbody></table>`;
-    document.getElementById("tableArea").innerHTML = html;
-
-    let unitSum = "";
-    subjects.forEach(s => { 
-        if(plan.selectedUnits && plan.selectedUnits[s]) 
-            unitSum += `<span style="background:${getSubjColor(s)}; padding:1px 3px; margin:1px; border-radius:2px; border:0.1pt solid #999;">【${s}】${plan.selectedUnits[s]} </span>`; 
-    });
-    document.getElementById("unitSummaryArea").innerHTML = unitSum;
+    document.getElementById("tableArea").innerHTML = html + `</tbody></table>`;
 }
 
 async function saveWeeklyConfig() {
@@ -331,56 +230,21 @@ async function saveWeeklyConfig() {
     });
     await _supabase.from('weekly_configs').upsert({ user_id: currentUser.id, config: weeklyConfig });
     alert("保存完了");
-    loadAllData();
+    createTable();
 }
 
 async function saveMonthlyData() {
     const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
-    const events = {};
-    const dismissals = {};
-    document.querySelectorAll(".event-input").forEach(inp => { if(inp.value) events[inp.dataset.day] = inp.value; });
-    document.querySelectorAll(".dismissal-input").forEach(inp => { if(inp.value) dismissals[inp.dataset.day] = inp.value; });
-    
+    const events = {}; const dismissals = {};
+    document.querySelectorAll(".event-input").forEach(inp => events[inp.dataset.day] = inp.value);
+    document.querySelectorAll(".dismissal-input").forEach(inp => dismissals[inp.dataset.day] = inp.value);
     const belongings = document.getElementById("belongings").value;
-    const old = allMonthlyPlans.find(p => p.year_month === ym)?.data || { selectedUnits: {} };
+    const old = allMonthlyPlans.find(p => p.year_month === ym)?.data || {};
     const newData = { ...old, events, dismissals, belongings };
-    
     await _supabase.from('monthly_plans').upsert({ user_id: currentUser.id, year_month: ym, data: newData });
-    
-    const index = allMonthlyPlans.findIndex(p => p.year_month === ym);
-    if(index > -1) allMonthlyPlans[index].data = newData;
-    else allMonthlyPlans.push({ year_month: ym, data: newData });
-}
-
-function renderWeeklyPlan() {
-    const year = Number(document.getElementById("year").value);
-    const month = Number(document.getElementById("month").value);
-    const weekNum = Number(document.getElementById("weekSelector").value);
-    const ym = `${year}-${month}`;
-    const plan = allMonthlyPlans.find(p => p.year_month === ym)?.data || { events: {} };
-    const days = [];
-    const firstDay = new Date(year, month-1, 1).getDay();
-    let start = 1 + (weekNum - 1) * 7 - firstDay + 1;
-    for(let i=0; i<7; i++) { let d = start+i; if(d>0 && d<=new Date(year, month, 0).getDate()) days.push(d); }
-    
-    let table = `<table><tr><th>校時</th>`;
-    days.forEach(d => table += `<th>${month}/${d}(${weeks[new Date(year, month-1, d).getDay()]})</th>`);
-    table += `</tr><tr><td>行事</td>`;
-    days.forEach(d => table += `<td>${plan.events ? plan.events[d]||'' : ''}</td>`);
-    for(let i=0; i<6; i++) {
-        table += `</tr><tr><td>${i+1}</td>`;
-        days.forEach(d => {
-            const w = weeks[new Date(year, month-1, d).getDay()];
-            const s = weeklyConfig[w] ? weeklyConfig[w][i] : '';
-            table += `<td style="background:${getSubjColor(s)}">${s}</td>`;
-        });
-    }
-    document.getElementById("weeklyPrintTableArea").innerHTML = table + `</table>`;
-    document.getElementById("weeklyPrintTitle").innerText = `${year}年度 ${month}月 第${weekNum}週 週案`;
 }
 
 checkUser();
-renderEditor();
 createTable();
 </script>
 </body>
