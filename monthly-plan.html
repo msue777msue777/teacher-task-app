@@ -3,17 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>月案・週案メーカー Pro - 軸変更・安定同期版</title>
+    <title>月案・週案メーカー Pro - 完全版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #2563eb; --bg: #f8fafc; --success: #10b981; }
         body { font-family: "Helvetica Neue", Arial, sans-serif; background: var(--bg); margin: 0; color: #1e293b; padding-bottom: 50px; }
         header { background: var(--primary); color: white; padding: 0.8rem; text-align: center; }
+        
+        /* --- ツールバー（戻るボタン復活） --- */
         .auth-bar { background: #0f172a; color: white; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .auth-bar-left { display: flex; align-items: center; gap: 15px; }
+        
         .container { max-width: 1200px; margin: 10px auto; padding: 0 15px; }
         .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         
         button { border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-top { background: #475569; }
         .btn-auth { background: #1e293b; border: 1px solid #475569; }
         .btn-sync { background: #f59e0b; }
         .btn-print { background: var(--success); }
@@ -35,14 +40,14 @@
             
             /* 1枚に収めるための縦幅調整 */
             table { border: 1.2pt solid black !important; font-size: 8.5pt; width: 100%; }
-            th, td { border: 0.5pt solid black !important; height: 19.2px !important; padding: 0 2px !important; line-height: 1; }
+            th, td { border: 0.5pt solid black !important; height: 19.3px !important; padding: 0 2px !important; line-height: 1; }
             
-            /* 横幅：時間割列を極小、行事欄を最大に */
+            /* 横幅：時間割列をスリム化、行事欄を最大に */
             .col-date, .col-day { width: 22px; }
             .col-event { width: auto; text-align: left; } 
             .col-subj, .col-dismiss { width: 32px; font-size: 8pt; }
 
-            .event-input, .dismissal-input { border: none !important; font-size: 8.5pt; }
+            .event-input, .dismissal-input { border: none !important; font-size: 8.5pt; background: transparent !important; }
             #belongings { border: 0.5pt solid black !important; height: 45px !important; margin-top: 2px; }
             #tableTitle { font-size: 16pt !important; margin: 0 0 2px 0 !important; }
         }
@@ -51,13 +56,17 @@
 <body>
 
 <div class="auth-bar no-print">
-    <div>月案・週案メーカー Pro</div>
-    <div id="syncIndicator" style="font-size: 12px; color: #94a3b8;">同期中...</div>
+    <div class="auth-bar-left">
+        <button class="btn-top" onclick="location.href='top.html'">← ポータルへ戻る</button>
+        <div id="syncIndicator" style="font-size: 12px; color: #94a3b8;">同期中...</div>
+    </div>
     <div>
         <span id="userStatus" style="margin-right:10px;">未ログイン</span>
         <button id="authBtn" class="btn-auth" onclick="handleAuth()">ログイン</button>
     </div>
 </div>
+
+<header><h1>月案・週案メーカー Pro</h1></header>
 
 <div class="container">
     <div class="card no-print">
@@ -66,13 +75,13 @@
             <input id="month" type="number" value="6" style="width:45px;" onchange="renderAll()">月
             <input id="teacher" placeholder="担任名" onchange="renderAll()">
             <select id="grade" onchange="renderAll()"><option>1年</option><option>2年</option><option>3年</option><option>4年</option><option selected>5年</option><option>6年</option></select>
-            <button class="btn-sync" onclick="loadFromCloud()">最新に更新</button>
+            <button class="btn-sync" onclick="loadFromCloud()">クラウドから読込</button>
             <button class="btn-print" onclick="window.print()">予定表（月案）を印刷</button>
         </div>
     </div>
 
     <div class="card no-print">
-        <h2>固定時間割設定（縦：校時 / 横：曜日）</h2>
+        <h2>固定時間割設定（縦：時間 / 横：曜日）</h2>
         <div id="editorArea" style="overflow-x:auto;"></div>
         <button style="background: var(--primary); margin-top:10px;" onclick="saveConfig()">時間割を保存</button>
     </div>
@@ -87,7 +96,7 @@
         <div style="margin-top:5px; border: 1pt solid black; padding: 4px;">
             <div id="unitSummaryArea" style="font-size: 8pt; margin-bottom: 2px;"></div>
             <div style="font-weight:bold; font-size: 9pt;">【連絡事項・持ち物】</div>
-            <textarea id="belongings" style="width:100%; border:none; outline:none; height:50px; font-size: 10pt;" onchange="saveMonthlyData()"></textarea>
+            <textarea id="belongings" style="width:100%; border:none; outline:none; height:48px; font-size: 10pt;" onchange="saveMonthlyData()"></textarea>
         </div>
     </div>
 </div>
@@ -100,7 +109,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const subjects = ["国語","算数","理科","社会","体育","音楽","図工","家庭","外国語","総合","学活","道徳"];
 const weekDays = ["月","火","水","木","金"];
 const weekFull = ["日","月","火","水","木","金","土"];
-const subColors = { "国語": "#fee2e2", "算数": "#e0f2fe", "理科": "#dcfce7", "社会": "#fef3c7", "体育": "#e0f7fa", "音楽": "#fff9c4", "図工": "#f3e8ff" };
+const subColors = { "国語": "#fee2e2", "算数": "#e0f2fe", "理科": "#dcfce7", "社会": "#fef3c7", "体育": "#e0f7fa", "音楽": "#fff9c4", "図工": "#f3e8ff", "道徳": "#f1f5f9" };
 
 let currentUser = null;
 let state = {
@@ -109,13 +118,15 @@ let state = {
 };
 
 window.onload = async () => {
+    // ローカルから即座に表示
     const local = localStorage.getItem('last_state');
     if(local) state = JSON.parse(local);
     renderAll();
     
+    // セッションチェック
     const { data: { session } } = await _supabase.auth.getSession();
     if (session) setupUser(session.user);
-    else document.getElementById("syncIndicator").innerText = "ゲストモード";
+    else document.getElementById("syncIndicator").innerText = "未ログイン(保存されません)";
 };
 
 async function setupUser(user) {
@@ -131,18 +142,22 @@ async function loadFromCloud() {
     document.getElementById("syncIndicator").innerText = "同期中...";
     const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
     
-    const [{ data: conf }, { data: plans }] = await Promise.all([
-        _supabase.from('weekly_configs').select('config').eq('user_id', currentUser.id).maybeSingle(),
-        _supabase.from('monthly_plans').select('data').eq('user_id', currentUser.id).eq('year_month', ym).maybeSingle()
-    ]);
+    try {
+        const [{ data: conf }, { data: plans }] = await Promise.all([
+            _supabase.from('weekly_configs').select('config').eq('user_id', currentUser.id).maybeSingle(),
+            _supabase.from('monthly_plans').select('data').eq('user_id', currentUser.id).eq('year_month', ym).maybeSingle()
+        ]);
 
-    if (conf) state.weeklyConfig = conf.config;
-    if (plans) state.plan = plans.data;
-    else state.plan = { events: {}, dismissals: {}, belongings: "" };
-    
-    localStorage.setItem('last_state', JSON.stringify(state));
-    renderAll();
-    document.getElementById("syncIndicator").innerText = "クラウドと同期済み";
+        if (conf) state.weeklyConfig = conf.config;
+        if (plans) state.plan = plans.data;
+        else state.plan = { events: {}, dismissals: {}, belongings: "" };
+        
+        localStorage.setItem('last_state', JSON.stringify(state));
+        renderAll();
+        document.getElementById("syncIndicator").innerText = "クラウド同期済み";
+    } catch (e) {
+        document.getElementById("syncIndicator").innerText = "同期エラー";
+    }
 }
 
 function renderAll() {
@@ -155,20 +170,20 @@ function renderAll() {
     document.getElementById("tableTitle").innerText = `${y}年度 ${m}月 学習予定表`;
     document.getElementById("belongings").value = state.plan.belongings || "";
 
-    // --- エディタ描画（縦：時間、横：曜日） ---
+    // 時間割エディタ（軸入れ替え版）
     let edHtml = `<table><tr><th>校時</th>${weekDays.map(d => `<th>${d}</th>`).join('')}</tr>`;
     for(let i=0; i<6; i++) {
         edHtml += `<tr><th>${i+1}</th>`;
         weekDays.forEach(day => {
             const s = state.weeklyConfig[day][i];
-            edHtml += `<td style="background:${subColors[s]||'#fff'}"><select onchange="state.weeklyConfig['${day}'][${i}]=this.value;renderAll();" style="width:100%; border:none; background:transparent;">`;
+            edHtml += `<td style="background:${subColors[s]||'#fff'}"><select onchange="updateW('${day}',${i},this.value)" style="width:100%; border:none; background:transparent;">`;
             edHtml += `<option value=""></option>${subjects.map(sub=>`<option value="${sub}" ${s===sub?'selected':''}>${sub}</option>`).join('')}</select></td>`;
         });
         edHtml += `</tr>`;
     }
     document.getElementById("editorArea").innerHTML = edHtml + `</table>`;
 
-    // --- 本表描画 ---
+    // 本表（月案）
     let html = `<table><thead><tr><th class="col-date">日</th><th class="col-day">曜</th><th class="col-event">行事・予定</th><th class="col-subj">1</th><th class="col-subj">2</th><th class="col-subj">3</th><th class="col-subj">4</th><th class="col-subj">5</th><th class="col-subj">6</th><th class="col-dismiss">下校</th></tr></thead><tbody>`;
     for(let d=1; d<=lastDay; d++) {
         const w = weekFull[new Date(y, m-1, d).getDay()];
@@ -181,13 +196,18 @@ function renderAll() {
     document.getElementById("tableArea").innerHTML = html + `</tbody></table>`;
 }
 
-async function saveConfig() {
-    if (!currentUser) return alert("ログインしてください");
-    await _supabase.from('weekly_configs').upsert({ user_id: currentUser.id, config: state.weeklyConfig });
-    alert("保存完了");
+function updateW(day, i, val) {
+    state.weeklyConfig[day][i] = val;
+    renderAll();
 }
 
-async function updatePlan(day, type, val) {
+async function saveConfig() {
+    if (!currentUser) return alert("ログインしてください");
+    const { error } = await _supabase.from('weekly_configs').upsert({ user_id: currentUser.id, config: state.weeklyConfig });
+    if (!error) alert("クラウドに保存しました");
+}
+
+function updatePlan(day, type, val) {
     if (type === 'event') state.plan.events[day] = val;
     if (type === 'dismiss') state.plan.dismissals[day] = val;
     saveMonthlyData();
@@ -195,23 +215,5 @@ async function updatePlan(day, type, val) {
 
 async function saveMonthlyData() {
     state.plan.belongings = document.getElementById("belongings").value;
+    localStorage.setItem('last_state', JSON.stringify(state));
     if (!currentUser) return;
-    const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
-    await _supabase.from('monthly_plans').upsert({ user_id: currentUser.id, year_month: ym, data: state.plan });
-    document.getElementById("syncIndicator").innerText = "保存済み(" + new Date().toLocaleTimeString() + ")";
-}
-
-async function handleAuth() {
-    const email = prompt("メールアドレス:");
-    const password = prompt("パスワード:");
-    if (!email || !password) return;
-    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-        const { error: se } = await _supabase.auth.signUp({ email, password });
-        if (se) alert("認証エラー: " + se.message);
-        else alert("登録完了。再度ログインしてください");
-    } else location.reload();
-}
-</script>
-</body>
-</html>
