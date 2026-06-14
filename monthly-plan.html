@@ -3,95 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>週案・月案・時数管理システム</title>
+    <title>月案・週案管理システム</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* 印刷時の設定 */
         @media print {
             .no-print { display: none !important; }
-            body { background-color: white; padding: 0; }
-            .print-area { box-shadow: none; border: none; width: 100%; margin: 0; }
-            table { font-size: 8px; border-color: black; }
-            th, td { border-color: black !important; }
+            body { background-color: white; padding: 0; margin: 0; }
+            .print-area { 
+                width: 100%; 
+                margin: 0; 
+                padding: 10mm; 
+                box-shadow: none;
+            }
+            table { border-color: black !important; }
+            th, td { border: 1px solid black !important; }
         }
-        .input-flat { width: 100%; border: none; background: transparent; font-size: 0.75rem; }
-        .input-flat:focus { background: white; outline: 1px solid #6366f1; }
+        
+        /* 画面表示用の入力補助スタイル */
+        .input-flat { width: 100%; border: none; background: transparent; font-size: 0.75rem; padding: 2px; }
+        .input-flat:focus { background: white; outline: 1px solid #3b82f6; }
+        
+        /* 表の基本スタイル */
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; }
     </style>
 </head>
-<body class="bg-slate-50 p-2">
+<body class="bg-slate-100 p-2 md:p-4">
 
-    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden no-print mb-8">
-        <!-- ヘッダー -->
+    <!-- 画面操作用メニュー（印刷されない） -->
+    <div class="max-w-[1200px] mx-auto bg-white shadow-lg rounded-lg overflow-hidden no-print mb-8">
         <div class="bg-slate-800 p-4 flex flex-col md:flex-row justify-between items-center text-white gap-4">
-            <div>
-                <h1 id="view-title" class="text-xl font-bold flex items-center">🗓️ 5月 管理システム</h1>
-                <p id="save-status" class="text-[10px] opacity-60 font-mono">Ready</p>
-            </div>
-            
-            <div class="flex flex-wrap gap-2 justify-center">
-                <button onclick="setView('edit')" class="bg-indigo-600 px-3 py-1 rounded text-sm hover:bg-indigo-500 transition">週案入力</button>
-                <button onclick="setView('monthly')" class="bg-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-500 transition">月案行事入力</button>
-                <button onclick="setView('base')" class="bg-orange-600 px-3 py-1 rounded text-sm hover:bg-orange-500 transition text-[10px]">固定時間割</button>
-                <button onclick="setView('print')" class="bg-emerald-600 px-3 py-1 rounded text-sm hover:bg-emerald-500 font-bold transition">月案印刷</button>
+            <h1 class="text-xl font-bold">🗓️ 週案・月案・時数管理</h1>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="setView('edit')" class="bg-indigo-600 px-4 py-1 rounded text-sm hover:bg-indigo-500">週案入力</button>
+                <button onclick="setView('monthly')" class="bg-blue-600 px-4 py-1 rounded text-sm hover:bg-blue-500">行事・備考入力</button>
+                <button onclick="setView('base')" class="bg-orange-600 px-4 py-1 rounded text-sm hover:bg-orange-500">固定時間割</button>
+                <button onclick="setView('print')" class="bg-emerald-600 px-4 py-1 rounded text-sm hover:bg-emerald-500 font-bold">月案を印刷する</button>
             </div>
         </div>
 
-        <!-- コントロール（週案用） -->
+        <!-- 週案用コントロール -->
         <div id="week-controls" class="p-4 border-b flex justify-between items-center bg-slate-50">
             <div class="flex items-center gap-4">
-                <button onclick="changeWeek(-7)" class="text-indigo-600 font-bold px-2">◀ 前週</button>
+                <button onclick="changeWeek(-7)" class="text-indigo-600 font-bold px-2 text-xl">◀</button>
                 <span id="current-week-label" class="text-lg font-black text-slate-700 w-40 text-center">---</span>
-                <button onclick="changeWeek(7)" class="text-indigo-600 font-bold px-2">次週 ▶</button>
+                <button onclick="changeWeek(7)" class="text-indigo-600 font-bold px-2 text-xl">▶</button>
             </div>
-            <button onclick="applyBaseSchedule()" class="bg-indigo-100 text-indigo-700 px-4 py-1 rounded-lg text-xs font-bold hover:bg-indigo-200">固定時間割を適用</button>
+            <button onclick="applyBaseSchedule()" class="bg-indigo-100 text-indigo-700 px-4 py-1 rounded-lg text-xs font-bold">この週に固定時間割を適用</button>
         </div>
 
-        <!-- メイン入力エリア -->
-        <div class="overflow-x-auto p-2">
-            <table class="w-full border-collapse border border-slate-300 table-fixed">
-                <thead>
-                    <tr id="table-header" class="bg-slate-100 text-[10px] text-slate-500">
-                        <!-- JSで動的に生成 -->
-                    </tr>
-                </thead>
+        <!-- メイン入力テーブル -->
+        <div class="overflow-x-auto p-4">
+            <table id="main-table" class="bg-white table-fixed">
+                <thead><tr id="table-header" class="bg-slate-100 text-xs"></tr></thead>
                 <tbody id="main-table-body"></tbody>
             </table>
         </div>
 
-        <!-- 時数集計 -->
-        <div id="summary-view" class="bg-slate-50 p-4 border-t">
-            <div id="summary-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-[10px]"></div>
+        <!-- 時数集計表示 -->
+        <div id="summary-view" class="p-4 border-t bg-slate-50">
+            <div id="summary-grid" class="grid grid-cols-2 md:grid-cols-7 gap-2 text-[10px]"></div>
         </div>
     </div>
 
-    <!-- 印刷用 月案シート -->
-    <div id="print-view" class="hidden bg-white p-8 print-area max-w-[1000px] mx-auto border border-gray-300">
-        <div class="flex justify-between items-end mb-2 border-b-4 border-double border-black pb-2">
-            <h1 class="text-2xl font-serif font-bold">5月 学習指導計画表（月案）</h1>
-            <div class="text-right text-[10px] leading-tight">
-                <p>第 5学年 1組</p>
-                <p>担任：末澤 誠英</p>
-            </div>
+    <!-- 印刷用 月案レイアウト -->
+    <div id="print-view" class="hidden bg-white print-area mx-auto">
+        <!-- 1. 印影欄 -->
+        <div class="flex justify-start mb-2">
+            <table class="w-auto border-collapse mb-2" style="width: 240px;">
+                <tr>
+                    <td class="border border-black text-[9px] text-center w-12 h-4">校長</td>
+                    <td class="border border-black text-[9px] text-center w-12">教頭</td>
+                    <td class="border border-black text-[9px] text-center w-12">教務</td>
+                    <td class="border border-black text-[9px] text-center w-12">担任</td>
+                </tr>
+                <tr>
+                    <td class="border border-black h-12"></td>
+                    <td class="border border-black"></td>
+                    <td class="border border-black"></td>
+                    <td class="border border-black"></td>
+                </tr>
+            </table>
         </div>
-        <table class="w-full border-2 border-black border-collapse text-[9px]">
+
+        <!-- 2. タイトル -->
+        <div class="text-center mb-4">
+            <h2 class="text-2xl font-bold tracking-[1em] relative left-[0.5em]">5月学習指導計画表</h2>
+        </div>
+
+        <!-- 3. 月案メインテーブル -->
+        <table class="w-full border-collapse border-2 border-black text-[9px]">
             <thead>
-                <tr class="bg-gray-100">
-                    <th class="border border-black w-8">日</th>
-                    <th class="border border-black w-6">曜</th>
-                    <th class="border border-black w-24">行事・朝の活動</th>
-                    <th class="border border-black">1</th>
-                    <th class="border border-black">2</th>
-                    <th class="border border-black">3</th>
-                    <th class="border border-black">4</th>
-                    <th class="border border-black">5</th>
-                    <th class="border border-black">6</th>
-                    <th class="border border-black w-20">備考</th>
+                <tr class="bg-gray-50">
+                    <th class="border border-black w-8 p-1">日</th>
+                    <th class="border border-black w-32 p-1 text-left">行事・朝の活動</th>
+                    <th class="border border-black w-1/8">1</th>
+                    <th class="border border-black w-1/8">2</th>
+                    <th class="border border-black w-1/8">3</th>
+                    <th class="border border-black w-1/8">4</th>
+                    <th class="border border-black w-1/8">5</th>
+                    <th class="border border-black w-1/8">6</th>
+                    <th class="border border-black w-24 p-1">備考</th>
                 </tr>
             </thead>
-            <tbody id="print-table-body"></tbody>
+            <tbody id="print-table-body">
+                <!-- JSで1日〜31日分生成 -->
+            </tbody>
         </table>
-        <div class="mt-4 no-print text-center">
-            <button onclick="window.print()" class="bg-blue-600 text-white px-10 py-3 rounded-full shadow-xl font-bold">月案を印刷・PDF保存する</button>
+
+        <!-- 印刷実行ボタン（画面上のみ） -->
+        <div class="mt-8 no-print text-center">
+            <button onclick="window.print()" class="bg-emerald-600 text-white px-12 py-3 rounded-full shadow-lg font-bold hover:bg-emerald-700">この形式で印刷・PDF保存する</button>
         </div>
     </div>
 
@@ -117,11 +141,6 @@
 
         function setView(mode) {
             currentMode = mode;
-            document.getElementById('view-title').innerText = 
-                mode === 'edit' ? "🗓️ 5月 週案入力" : 
-                mode === 'monthly' ? "📋 5月 行事・備考入力" : 
-                mode === 'base' ? "⚙️ 固定時間割設定" : "📄 月案 印刷プレビュー";
-            
             document.getElementById('week-controls').classList.toggle('hidden', mode !== 'edit');
             document.getElementById('summary-view').classList.toggle('hidden', mode === 'print' || mode === 'monthly');
             document.getElementById('print-view').classList.toggle('hidden', mode !== 'print');
@@ -132,9 +151,6 @@
         }
 
         async function refreshData() {
-            const statusEl = document.getElementById('save-status');
-            statusEl.innerText = '読み込み中...';
-            
             const { data: schData } = await _supabase.from('schedules').select('*');
             const { data: noteData } = await _supabase.from('daily_notes').select('*');
             const { data: baseData } = await _supabase.from('base_schedules').select('*');
@@ -145,18 +161,17 @@
             header.innerHTML = '';
 
             if (currentMode === 'edit') {
-                // 週案入力レイアウト
                 const weekDays = [];
                 for(let i=0; i<5; i++) {
                     const d = new Date(currentMonday); d.setDate(d.getDate() + i);
                     weekDays.push(d.toISOString().split('T')[0]);
                 }
-                header.innerHTML = '<th class="border border-slate-300 p-2 w-10 text-xs">校時</th>';
-                weekDays.forEach((date, i) => header.innerHTML += `<th class="border border-slate-300 p-1 text-center font-bold text-xs">${date.split('-')[2]}日(${["月","火","水","木","金"][i]})</th>`);
+                header.innerHTML = '<th class="p-2 w-12">校時</th>';
+                weekDays.forEach((date, i) => header.innerHTML += `<th class="p-2 text-center font-bold">${date.split('-')[2]}日(${["月","火","水","木","金"][i]})</th>`);
 
                 for (let p = 1; p <= 6; p++) {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td class="border border-slate-200 p-2 bg-slate-50 text-center font-bold text-slate-400 text-xs">${p}</td>`;
+                    tr.innerHTML = `<td class="p-2 bg-slate-50 text-center font-bold text-slate-400 text-xs">${p}</td>`;
                     weekDays.forEach(dateStr => {
                         const cell = schData?.find(d => d.date === dateStr && d.period === p);
                         tr.appendChild(createCell(dateStr, p, cell));
@@ -167,34 +182,27 @@
                 document.getElementById('current-week-label').innerText = `${currentMonday.getMonth()+1}月${currentMonday.getDate()}日週`;
 
             } else if (currentMode === 'monthly') {
-                // 月案（行事・備考）入力レイアウト
-                header.innerHTML = '<th class="border border-slate-300 p-1 w-12 text-xs text-blue-600">日付</th><th class="border border-slate-300 p-1 w-32 text-xs text-blue-600">行事・朝の活動</th><th class="border border-slate-300 p-1 text-xs text-blue-600">授業内容（週案と連動）</th><th class="border border-slate-300 p-1 w-32 text-xs text-blue-600">備考</th>';
+                header.innerHTML = '<th class="w-16 p-1">日付</th><th class="w-48 p-1 text-blue-600">行事・朝の活動</th><th class="p-1">予定(週案連動)</th><th class="w-48 p-1 text-blue-600">備考</th>';
                 for (let i = 1; i <= 31; i++) {
                     const dateStr = `2026-05-${String(i).padStart(2, '0')}`;
                     const note = noteData?.find(n => n.date === dateStr);
                     const dayLessons = schData?.filter(s => s.date === dateStr).sort((a,b)=>a.period-b.period);
                     const tr = document.createElement('tr');
-                    tr.className = "hover:bg-blue-50 transition-colors";
-                    const lessonText = dayLessons?.map(l => {
-                        const sName = subjects.find(s => s.id === l.subject_id)?.name || '';
-                        return `${l.period}:${sName}`;
-                    }).join(', ') || '(未入力)';
-
+                    const lessonText = dayLessons?.map(l => subjects.find(s => s.id === l.subject_id)?.name || '').join(' / ');
                     tr.innerHTML = `
-                        <td class="border border-slate-200 p-1 text-center text-xs font-bold bg-slate-50">${i}日</td>
-                        <td class="border border-slate-200 p-0"><input type="text" class="input-flat p-1" value="${note?.event || ''}" onblur="saveNote('${dateStr}', 'event', this.value)" placeholder="..."></td>
-                        <td class="border border-slate-200 p-1 text-[10px] text-slate-400 italic">${lessonText}</td>
-                        <td class="border border-slate-200 p-0"><input type="text" class="input-flat p-1" value="${note?.remark || ''}" onblur="saveNote('${dateStr}', 'remark', this.value)" placeholder="..."></td>
+                        <td class="p-1 text-center text-xs font-bold bg-slate-50">${i}日</td>
+                        <td><input type="text" class="input-flat" value="${note?.event || ''}" onblur="saveNote('${dateStr}', 'event', this.value)"></td>
+                        <td class="p-1 text-[10px] text-gray-400 italic">${lessonText || '-'}</td>
+                        <td><input type="text" class="input-flat" value="${note?.remark || ''}" onblur="saveNote('${dateStr}', 'remark', this.value)"></td>
                     `;
                     body.appendChild(tr);
                 }
             } else if (currentMode === 'base') {
-                // 固定時間割レイアウト
-                header.innerHTML = '<th class="border border-slate-300 p-2 w-10 text-xs text-orange-600 font-bold">校時</th>';
-                ["月曜", "火曜", "水曜", "木曜", "金曜"].forEach(d => header.innerHTML += `<th class="border border-slate-300 p-2 text-xs text-orange-600 font-bold">${d}</th>`);
+                header.innerHTML = '<th class="p-2 w-12 font-bold text-orange-600">校時</th>';
+                ["月", "火", "水", "木", "金"].forEach(d => header.innerHTML += `<th class="p-2 font-bold text-orange-600">${d}曜日</th>`);
                 for (let p = 1; p <= 6; p++) {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td class="border border-slate-200 p-2 bg-orange-50 text-center font-bold text-orange-300 text-xs">${p}</td>`;
+                    tr.innerHTML = `<td class="p-2 bg-orange-50 text-center font-bold text-orange-300">${p}</td>`;
                     for (let dw = 1; dw <= 5; dw++) {
                         const cell = baseData?.find(d => d.day_of_week === dw && d.period === p);
                         tr.appendChild(createBaseCell(dw, p, cell));
@@ -202,96 +210,28 @@
                     body.appendChild(tr);
                 }
             }
-            statusEl.innerText = '接続済み';
         }
 
         function createCell(date, period, cell) {
             const td = document.createElement('td');
-            td.className = "border border-slate-200 p-1 h-32 align-top hover:bg-indigo-50";
+            td.className = "p-1 h-32 align-top hover:bg-indigo-50";
             const subOptions = subjects.map(s => `<option value="${s.id}" ${cell?.subject_id === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
             const filteredUnits = units.filter(u => u.subject_id === cell?.subject_id);
             const unitOptions = filteredUnits.map(u => `<option value="${u.id}" ${cell?.unit_id === u.id ? 'selected' : ''}>${u.unit_name}</option>`).join('');
             td.innerHTML = `
-                <select onchange="saveData('${date}', ${period}, this.value)" class="w-full text-[10px] font-bold mb-1 text-indigo-800 outline-none bg-transparent appearance-none">
-                    <option value="">--教科--</option>${subOptions}
+                <select onchange="saveData('${date}', ${period}, this.value)" class="w-full text-[10px] font-bold mb-1 text-indigo-800 outline-none bg-transparent">
+                    <option value="">--</option>${subOptions}
                 </select>
-                <select onchange="saveUnit('${date}', ${period}, this.value)" class="w-full text-[9px] bg-indigo-50 text-indigo-600 mb-1 rounded p-0.5 outline-none ${!cell?.subject_id ? 'hidden' : ''}">
+                <select onchange="saveUnit('${date}', ${period}, this.value)" class="w-full text-[9px] bg-slate-50 mb-1 rounded p-0.5 outline-none ${!cell?.subject_id ? 'hidden' : ''}">
                     <option value="">--単元--</option>${unitOptions}
                 </select>
-                <textarea onblur="updateMemo('${date}', ${period}, this.value)" class="w-full text-[9px] leading-tight h-16 bg-transparent border-none resize-none outline-none focus:bg-white p-1" placeholder="備考...">${cell?.memo || ''}</textarea>
+                <textarea onblur="updateMemo('${date}', ${period}, this.value)" class="w-full text-[9px] leading-tight h-16 bg-transparent border-none resize-none outline-none font-sans" placeholder="備考...">${cell?.memo || ''}</textarea>
             `;
             return td;
         }
 
         function createBaseCell(dw, p, cell) {
             const td = document.createElement('td');
-            td.className = "border border-slate-200 p-1 h-20 align-top bg-orange-50";
+            td.className = "p-1 h-20 align-top bg-orange-50";
             const subOptions = subjects.map(s => `<option value="${s.id}" ${cell?.subject_id === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
-            td.innerHTML = `<select onchange="saveBaseSchedule(${dw}, ${p}, this.value)" class="w-full text-xs font-bold bg-transparent outline-none text-orange-800"><option value="">--教科--</option>${subOptions}</select>`;
-            return td;
-        }
-
-        async function saveNote(date, column, value) {
-            await _supabase.from('daily_notes').upsert({ date, [column]: value }, { onConflict: 'date' });
-            document.getElementById('save-status').innerText = '行事保存完了';
-        }
-
-        async function renderPrintView() {
-            const { data: sch } = await _supabase.from('schedules').select('*, subjects(name), units(unit_name)');
-            const { data: notes } = await _supabase.from('daily_notes').select('*');
-            const body = document.getElementById('print-table-body');
-            body.innerHTML = '';
-            for (let i = 1; i <= 31; i++) {
-                const dateStr = `2026-05-${String(i).padStart(2, '0')}`;
-                const d = new Date(dateStr);
-                const dayName = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
-                const note = notes?.find(n => n.date === dateStr);
-                let cellsHtml = '';
-                for (let p = 1; p <= 6; p++) {
-                    const cell = sch?.find(s => s.date === dateStr && s.period === p);
-                    cellsHtml += `<td class="border border-black p-1 leading-tight h-12 align-top">
-                        <div class="font-bold underline mb-0.5">${cell?.subjects?.name || ''}</div>
-                        <div class="text-[7px] text-gray-700">${cell?.units?.unit_name || ''}</div>
-                    </td>`;
-                }
-                body.innerHTML += `<tr class="${d.getDay() === 0 || d.getDay() === 6 ? 'bg-gray-50' : ''}">
-                    <td class="border border-black text-center font-bold">${i}</td>
-                    <td class="border border-black text-center">${dayName}</td>
-                    <td class="border border-black p-1 align-top">${note?.event || ''}</td>
-                    ${cellsHtml}
-                    <td class="border border-black p-1 align-top italic">${note?.remark || ''}</td>
-                </tr>`;
-            }
-        }
-
-        // ラッパー関数
-        async function saveData(date, period, sid) { await _supabase.from('schedules').upsert({ date, period, subject_id: sid ? parseInt(sid) : null, unit_id: null }, { onConflict: 'date,period' }); refreshData(); }
-        async function saveUnit(date, period, uid) { await _supabase.from('schedules').upsert({ date, period, unit_id: uid ? parseInt(uid) : null }, { onConflict: 'date,period' }); }
-        async function updateMemo(date, period, m) { await _supabase.from('schedules').upsert({ date, period, memo: m }, { onConflict: 'date,period' }); }
-        async function saveBaseSchedule(dw, p, sid) { await _supabase.from('base_schedules').upsert({ day_of_week: dw, period: p, subject_id: sid ? parseInt(sid) : null }, { onConflict: 'day_of_week,period' }); }
-        function changeWeek(n) { currentMonday.setDate(currentMonday.getDate() + n); refreshData(); }
-        async function applyBaseSchedule() {
-            if(!confirm("この週に固定時間割を適用しますか？")) return;
-            const { data: base } = await _supabase.from('base_schedules').select('*');
-            const upserts = [];
-            for(let i=0; i<5; i++){
-                const d = new Date(currentMonday); d.setDate(d.getDate() + i);
-                const ds = d.toISOString().split('T')[0];
-                base.filter(b => b.day_of_week === (i+1)).forEach(b => upserts.push({ date: ds, period: b.period, subject_id: b.subject_id }));
-            }
-            await _supabase.from('schedules').upsert(upserts, { onConflict: 'date,period' });
-            refreshData();
-        }
-        function renderSummary(sd, pl) {
-            const g = document.getElementById('summary-grid'); g.innerHTML = '';
-            subjects.forEach(s => {
-                const act = sd.filter(d => d.subject_id === s.id).length;
-                const p = pl.find(x => x.subject_id === s.id)?.planned_hours || 0;
-                g.innerHTML += `<div class="bg-white border border-slate-200 p-2 rounded shadow-sm flex justify-between items-center"><span class="font-bold">${s.name}</span><span>${act}/${p}</span></div>`;
-            });
-        }
-
-        init();
-    </script>
-</body>
-</html>
+            td.innerHTML = `<select onchange="saveBaseSchedule
