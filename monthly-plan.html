@@ -3,56 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>5月 週案・時数管理</title>
+    <title>週案・時数管理・配布用作成</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: white; padding: 0; }
+            .print-area { box-shadow: none; border: none; width: 100%; }
+            table { font-size: 9px; }
+        }
+    </style>
 </head>
 <body class="bg-slate-50 p-2">
 
-    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-slate-200">
+    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden no-print">
         <!-- ヘッダー -->
-        <div class="bg-emerald-700 p-4 flex flex-col md:flex-row justify-between items-center text-white gap-4">
+        <div class="bg-indigo-700 p-4 flex flex-col md:flex-row justify-between items-center text-white gap-4">
             <div>
-                <h1 class="text-xl font-bold flex items-center">
-                    <span class="mr-2">🗓️</span> 5月 週案・時数管理
-                </h1>
-                <div id="save-status" class="text-[10px] bg-emerald-800 px-2 py-0.5 rounded-full inline-block mt-1">接続済み</div>
+                <h1 class="text-xl font-bold flex items-center">🗓️ 5月 週案・時数管理システム</h1>
+                <p id="save-status" class="text-[10px] bg-indigo-800 px-2 py-0.5 rounded-full inline-block mt-1 font-mono">Ready</p>
             </div>
             
-            <!-- 週切り替え -->
-            <div class="flex items-center bg-white/10 rounded-lg p-1 border border-white/20">
-                <button onclick="changeWeek(-7)" class="px-3 py-1 hover:bg-white/10 rounded transition text-sm">◀ 前週</button>
-                <span id="current-week-label" class="px-4 text-sm font-bold border-x border-white/20 min-w-[100px] text-center">5月11日週</span>
-                <button onclick="changeWeek(7)" class="px-3 py-1 hover:bg-white/10 rounded transition text-sm">次週 ▶</button>
+            <div class="flex flex-wrap gap-2 justify-center">
+                <button onclick="setView('edit')" class="bg-white/20 px-3 py-1 rounded text-sm hover:bg-white/30">通常入力</button>
+                <button onclick="setView('base')" class="bg-orange-500 px-3 py-1 rounded text-sm hover:bg-orange-600 font-bold">固定時間割設定</button>
+                <button onclick="setView('print')" class="bg-emerald-500 px-3 py-1 rounded text-sm hover:bg-emerald-600 font-bold">児童配布用表示</button>
             </div>
+        </div>
 
-            <a href="index.html" class="bg-white/10 px-4 py-2 rounded text-sm hover:bg-white/20 transition border border-white/20">メニューへ戻る</a>
+        <!-- コントロールパネル -->
+        <div id="controls" class="p-4 border-b flex justify-between items-center bg-indigo-50">
+            <div class="flex items-center gap-4">
+                <button onclick="changeWeek(-7)" class="text-indigo-600 font-bold px-2">◀ 前週</button>
+                <span id="current-week-label" class="text-lg font-black text-indigo-900 w-32 text-center">---</span>
+                <button onclick="changeWeek(7)" class="text-indigo-600 font-bold px-2">次週 ▶</button>
+            </div>
+            <button onclick="applyBaseSchedule()" id="apply-base-btn" class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-sm shadow-md hover:bg-indigo-700 transition">
+                この週に固定時間割を適用
+            </button>
         </div>
 
         <!-- 週案テーブル -->
-        <div class="overflow-x-auto p-2">
+        <div id="edit-view" class="overflow-x-auto p-2">
             <table class="w-full border-collapse border border-slate-300 table-fixed">
                 <thead>
-                    <tr id="table-header" class="bg-slate-100 text-[10px] md:text-xs text-slate-500 uppercase tracking-wider">
-                        <th class="border border-slate-300 p-2 w-10">校時</th>
+                    <tr id="table-header" class="bg-slate-100 text-[10px] text-slate-500 uppercase tracking-wider">
+                        <th class="border border-slate-300 p-2 w-10 text-center">校時</th>
                         <!-- JSで日付生成 -->
                     </tr>
                 </thead>
-                <tbody id="schedule-body">
-                    <!-- JSで動的に生成 -->
-                </tbody>
+                <tbody id="schedule-body"></tbody>
             </table>
         </div>
 
         <!-- 時数集計 -->
-        <div class="bg-slate-50 p-4 md:p-6 border-t border-slate-200">
-            <h2 class="text-xs font-bold mb-4 text-slate-500 uppercase tracking-widest flex items-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
-                5月の累計時数進捗
-            </h2>
-            <div id="summary-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                <!-- JSで動的に生成 -->
-            </div>
+        <div id="summary-view" class="bg-slate-50 p-4 md:p-6 border-t">
+            <div id="summary-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3"></div>
+        </div>
+    </div>
+
+    <!-- 児童配布用プリント（印刷用レイアウト） -->
+    <div id="print-view" class="hidden bg-white p-4 print-area max-w-5xl mx-auto">
+        <div class="flex justify-between items-end mb-4 border-b-2 border-black pb-2">
+            <h1 class="text-2xl font-bold">5月 学習予定表</h1>
+            <p class="text-sm">第 5学年 1組 担任：末澤 誠英</p>
+        </div>
+        <table class="w-full border-2 border-black border-collapse text-xs">
+            <thead>
+                <tr class="bg-gray-100">
+                    <th class="border border-black p-1 w-12 text-center">日</th>
+                    <th class="border border-black p-1 w-8 text-center">曜</th>
+                    <th class="border border-black p-1 w-32">学校行事など</th>
+                    <th class="border border-black p-1">1</th>
+                    <th class="border border-black p-1">2</th>
+                    <th class="border border-black p-1">3</th>
+                    <th class="border border-black p-1">4</th>
+                    <th class="border border-black p-1">5</th>
+                    <th class="border border-black p-1">6</th>
+                </tr>
+            </thead>
+            <tbody id="print-table-body"></tbody>
+        </table>
+        <div class="mt-4 no-print text-center">
+            <button onclick="window.print()" class="bg-blue-600 text-white px-8 py-2 rounded shadow-lg">この画面を印刷・PDF保存</button>
         </div>
     </div>
 
@@ -62,37 +96,38 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let currentMonday = new Date('2026-05-11'); 
-        const periods = [1, 2, 3, 4, 5, 6];
-        let subjects = [];
-        let units = [];
+        let subjects = [], units = [], currentMode = 'edit';
 
         async function init() {
-            try {
-                // 教科、単元、目標時数を一括取得
-                const [{ data: subData }, { data: unitData }, { data: plans }] = await Promise.all([
-                    _supabase.from('subjects').select('*').order('display_order'),
-                    _supabase.from('units').select('*'),
-                    _supabase.from('yearly_plans').select('*').eq('month', 5)
-                ]);
-                subjects = subData || [];
-                units = unitData || [];
-                window.plans = plans || [];
-                await refreshData();
-            } catch (e) {
-                document.getElementById('save-status').innerText = '接続エラー';
-            }
+            const [{ data: subData }, { data: unitData }, { data: plans }] = await Promise.all([
+                _supabase.from('subjects').select('*').order('display_order'),
+                _supabase.from('units').select('*'),
+                _supabase.from('yearly_plans').select('*').eq('month', 5)
+            ]);
+            subjects = subData || [];
+            units = unitData || [];
+            window.plans = plans || [];
+            await refreshData();
         }
 
-        async function changeWeek(daysOffset) {
-            currentMonday.setDate(currentMonday.getDate() + daysOffset);
-            await refreshData();
+        function setView(mode) {
+            currentMode = mode;
+            document.getElementById('edit-view').classList.toggle('hidden', mode === 'print');
+            document.getElementById('summary-view').classList.toggle('hidden', mode === 'print');
+            document.getElementById('controls').classList.toggle('hidden', mode === 'print' || mode === 'base');
+            document.getElementById('print-view').classList.toggle('hidden', mode !== 'print');
+            document.getElementById('apply-base-btn').innerText = mode === 'base' ? "固定時間割を保存" : "この週に固定時間割を適用";
+            
+            if (mode === 'print') renderPrintView();
+            else refreshData();
         }
 
         async function refreshData() {
             const statusEl = document.getElementById('save-status');
-            statusEl.innerText = '更新中...';
+            statusEl.innerText = 'Syncing...';
             
-            const { data: schData } = await _supabase.from('schedules').select('*');
+            let query = currentMode === 'base' ? _supabase.from('base_schedules').select('*') : _supabase.from('schedules').select('*');
+            const { data: savedData } = await query;
             
             const weekDays = [];
             for(let i=0; i<5; i++) {
@@ -101,101 +136,150 @@
                 weekDays.push(d.toISOString().split('T')[0]);
             }
 
-            renderTableHeader(weekDays);
-            renderTable(weekDays, schData || []);
-            renderSummary(schData || [], window.plans);
-            
-            const label = `${currentMonday.getMonth()+1}月${currentMonday.getDate()}日週`;
-            document.getElementById('current-week-label').innerText = label;
-            statusEl.innerText = '接続済み';
-        }
-
-        function renderTableHeader(weekDays) {
-            const header = document.getElementById('table-header');
-            const dayNames = ["月", "火", "水", "木", "金"];
-            header.innerHTML = '<th class="border border-slate-300 p-2 w-10"></th>';
-            weekDays.forEach((date, i) => {
-                header.innerHTML += `<th class="border border-slate-300 p-1 md:p-2 text-center font-bold">${date.split('-')[2]}<span class="block md:inline font-normal opacity-60 text-[9px]">(${dayNames[i]})</span></th>`;
-            });
+            if (currentMode === 'edit') {
+                renderTableHeader(weekDays);
+                renderTable(weekDays, savedData || []);
+                const { data: allSch } = await _supabase.from('schedules').select('*');
+                renderSummary(allSch || [], window.plans);
+                document.getElementById('current-week-label').innerText = `${currentMonday.getMonth()+1}月${currentMonday.getDate()}日週`;
+            } else {
+                renderBaseTable(savedData || []);
+            }
+            statusEl.innerText = 'Cloud Connected';
         }
 
         function renderTable(weekDays, savedData) {
             const body = document.getElementById('schedule-body');
             body.innerHTML = '';
-
-            periods.forEach(p => {
+            for (let p = 1; p <= 6; p++) {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="border border-slate-200 p-2 bg-slate-50 text-center font-bold text-slate-400 text-[10px]">${p}</td>`;
-                
+                tr.innerHTML = `<td class="border border-slate-200 p-2 bg-slate-50 text-center font-bold text-slate-400 text-xs">${p}</td>`;
                 weekDays.forEach(dateStr => {
-                    const cellData = savedData.find(d => d.date === dateStr && d.period === p);
-                    const td = document.createElement('td');
-                    td.className = "border border-slate-200 p-1 h-32 align-top transition-colors";
-                    
-                    const subOptions = subjects.map(s => `<option value="${s.id}" ${cellData?.subject_id === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
-                    
-                    // その教科に属する単元のみフィルタリング
-                    const filteredUnits = units.filter(u => u.subject_id === cellData?.subject_id);
-                    const unitOptions = filteredUnits.map(u => `<option value="${u.id}" ${cellData?.unit_id === u.id ? 'selected' : ''}>${u.unit_name}</option>`).join('');
-
-                    td.innerHTML = `
-                        <select onchange="save('${dateStr}', ${p}, this.value)" class="w-full text-xs font-bold bg-transparent mb-1 text-emerald-800 outline-none">
-                            <option value="">--教科--</option>
-                            ${subOptions}
-                        </select>
-                        <select onchange="saveUnit('${dateStr}', ${p}, this.value)" class="w-full text-[9px] bg-emerald-50 text-emerald-600 mb-1 rounded p-0.5 outline-none ${!cellData?.subject_id ? 'hidden' : ''}">
-                            <option value="">--単元を選択--</option>
-                            ${unitOptions}
-                        </select>
-                        <textarea onblur="updateMemo('${dateStr}', ${p}, this.value)" class="w-full text-[9px] leading-tight h-16 bg-transparent border-none resize-none outline-none focus:bg-white p-1 rounded font-sans" placeholder="備考...">${cellData?.memo || ''}</textarea>
-                    `;
-                    tr.appendChild(td);
+                    const cell = savedData.find(d => d.date === dateStr && d.period === p);
+                    tr.appendChild(createCell(dateStr, p, cell));
                 });
                 body.appendChild(tr);
+            }
+        }
+
+        function renderBaseTable(baseData) {
+            const header = document.getElementById('table-header');
+            header.innerHTML = '<th class="border border-slate-300 p-2 w-10">校時</th>';
+            ["月", "火", "水", "木", "金"].forEach(d => header.innerHTML += `<th class="border border-slate-300 p-2">${d}曜日</th>`);
+            
+            const body = document.getElementById('schedule-body');
+            body.innerHTML = '';
+            for (let p = 1; p <= 6; p++) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="border border-slate-200 p-2 bg-slate-50 text-center font-bold text-slate-400 text-xs">${p}</td>`;
+                for (let dw = 1; d_w <= 5; dw++) {
+                    const cell = baseData.find(d => d.day_of_week === dw && d.period === p);
+                    tr.appendChild(createBaseCell(dw, p, cell));
+                }
+                body.appendChild(tr);
+            }
+        }
+
+        function createCell(date, period, cell) {
+            const td = document.createElement('td');
+            td.className = "border border-slate-200 p-1 h-32 align-top hover:bg-indigo-50";
+            const subOpt = subjects.map(s => `<option value="${s.id}" ${cell?.subject_id === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
+            const filteredUnits = units.filter(u => u.subject_id === cell?.subject_id);
+            const unitOpt = filteredUnits.map(u => `<option value="${u.id}" ${cell?.unit_id === u.id ? 'selected' : ''}>${u.unit_name}</option>`).join('');
+
+            td.innerHTML = `
+                <select onchange="saveData('${date}', ${period}, this.value)" class="w-full text-xs font-bold mb-1 text-indigo-800 outline-none appearance-none">${subOpt}<option value="" ${!cell?.subject_id?'selected':''}>--</option></select>
+                <select onchange="saveUnit('${date}', ${period}, this.value)" class="w-full text-[9px] bg-slate-50 mb-1 rounded p-0.5 ${!cell?.subject_id ? 'hidden' : ''}">${unitOpt}<option value="">--単元--</option></select>
+                <textarea onblur="updateMemo('${date}', ${period}, this.value)" class="w-full text-[9px] leading-tight h-16 bg-transparent border-none resize-none outline-none font-sans" placeholder="備考...">${cell?.memo || ''}</textarea>
+            `;
+            return td;
+        }
+
+        function createBaseCell(dw, p, cell) {
+            const td = document.createElement('td');
+            td.className = "border border-slate-200 p-1 h-20 align-top bg-orange-50";
+            const subOpt = subjects.map(s => `<option value="${s.id}" ${cell?.subject_id === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
+            td.innerHTML = `<select onchange="saveBaseSchedule(${dw}, ${p}, this.value)" class="w-full text-xs font-bold bg-transparent outline-none">${subOpt}<option value="" ${!cell?.subject_id?'selected':''}>--</option></select>`;
+            return td;
+        }
+
+        async function applyBaseSchedule() {
+            if(!confirm("現在の週に固定時間割を適用しますか？入力済みの内容は上書きされます。")) return;
+            const { data: base } = await _supabase.from('base_schedules').select('*');
+            const weekDays = [];
+            for(let i=0; i<5; i++) {
+                const d = new Date(currentMonday); d.setDate(d.getDate() + i);
+                weekDays.push(d.toISOString().split('T')[0]);
+            }
+            const upserts = [];
+            weekDays.forEach((date, i) => {
+                base.filter(b => b.day_of_week === (i+1)).forEach(b => {
+                    upserts.push({ date, period: b.period, subject_id: b.subject_id });
+                });
             });
+            await _supabase.from('schedules').upsert(upserts, { onConflict: 'date,period' });
+            refreshData();
         }
 
-        async function save(date, period, subjectId) {
-            await _supabase.from('schedules').upsert({
-                date: date,
-                period: period,
-                subject_id: subjectId ? parseInt(subjectId) : null,
-                unit_id: null // 教科が変わったら単元はリセット
-            }, { onConflict: 'date,period' });
-            await refreshData();
+        async function saveBaseSchedule(dw, p, sid) {
+            await _supabase.from('base_schedules').upsert({ day_of_week: dw, period: p, subject_id: sid ? parseInt(sid) : null }, { onConflict: 'day_of_week,period' });
         }
 
-        async function saveUnit(date, period, unitId) {
-            await _supabase.from('schedules').upsert({
-                date: date, period: period,
-                unit_id: unitId ? parseInt(unitId) : null
-            }, { onConflict: 'date,period' });
-            document.getElementById('save-status').innerText = '単元保存完了';
+        async function saveData(date, period, sid) {
+            await _supabase.from('schedules').upsert({ date, period, subject_id: sid ? parseInt(sid) : null, unit_id: null }, { onConflict: 'date,period' });
+            refreshData();
         }
 
-        async function updateMemo(date, period, memo) {
-            await _supabase.from('schedules').upsert({
-                date: date, period: period, memo: memo
-            }, { onConflict: 'date,period' });
-        }
-
-        function renderSummary(schData, plans) {
-            const container = document.getElementById('summary-grid');
-            container.innerHTML = '';
-            subjects.forEach(s => {
-                const actual = schData.filter(d => d.subject_id === s.id).length;
-                const plan = plans.find(p => p.subject_id === s.id)?.planned_hours || 0;
-                const percent = Math.min((actual / (plan || 1)) * 100, 100);
+        async function renderPrintView() {
+            const { data: sch } = await _supabase.from('schedules').select('*, subjects(name), units(unit_name)');
+            const body = document.getElementById('print-table-body');
+            body.innerHTML = '';
+            
+            // 5月1日から31日まで生成
+            for (let i = 1; i <= 31; i++) {
+                const dateStr = `2026-05-${String(i).padStart(2, '0')}`;
+                const d = new Date(dateStr);
+                const dayName = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
+                const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                 
-                container.innerHTML += `
-                    <div class="bg-white border border-slate-200 p-2 rounded shadow-sm">
-                        <div class="text-[9px] text-slate-400 font-bold mb-1">${s.name}</div>
-                        <div class="text-xs font-black text-slate-700">${actual} <span class="text-[9px] font-normal text-slate-400">/ ${plan}</span></div>
-                        <div class="w-full bg-slate-100 h-1 mt-1 rounded-full overflow-hidden">
-                            <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${percent}%"></div>
-                        </div>
-                    </div>
+                let cellsHtml = '';
+                for (let p = 1; p <= 6; p++) {
+                    const cell = sch.find(s => s.date === dateStr && s.period === p);
+                    cellsHtml += `<td class="border border-black p-1 text-[8px] leading-tight h-10">
+                        <div class="font-bold">${cell?.subjects?.name || ''}</div>
+                        <div>${cell?.units?.unit_name || ''}</div>
+                    </td>`;
+                }
+
+                body.innerHTML += `
+                    <tr class="${isWeekend ? 'bg-gray-100' : ''}">
+                        <td class="border border-black text-center p-1">${i}日</td>
+                        <td class="border border-black text-center p-1">${dayName}</td>
+                        <td class="border border-black p-1 text-[8px]"></td>
+                        ${cellsHtml}
+                    </tr>
                 `;
+            }
+        }
+
+        // 基本機能のラップ
+        async function saveUnit(date, period, uid) { await _supabase.from('schedules').upsert({ date, period, unit_id: uid ? parseInt(uid) : null }, { onConflict: 'date,period' }); }
+        async function updateMemo(date, period, m) { await _supabase.from('schedules').upsert({ date, period, memo: m }, { onConflict: 'date,period' }); }
+        function changeWeek(n) { currentMonday.setDate(currentMonday.getDate() + n); refreshData(); }
+        function renderTableHeader(wd) {
+            const h = document.getElementById('table-header');
+            h.innerHTML = '<th class="border border-slate-300 p-2 w-10"></th>';
+            wd.forEach((d, i) => h.innerHTML += `<th class="border border-slate-300 p-1 text-center font-bold">${d.split('-')[2]}日(${["月","火","水","木","金"][i]})</th>`);
+        }
+        function renderSummary(sd, pl) {
+            const g = document.getElementById('summary-grid'); g.innerHTML = '';
+            subjects.forEach(s => {
+                const act = sd.filter(d => d.subject_id === s.id).length;
+                const p = pl.find(x => x.subject_id === s.id)?.planned_hours || 0;
+                g.innerHTML += `<div class="bg-white border p-2 rounded shadow-sm">
+                    <div class="text-[9px] text-slate-400 font-bold">${s.name}</div>
+                    <div class="text-sm font-black text-slate-700">${act} / ${p}</div>
+                </div>`;
             });
         }
 
