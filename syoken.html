@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>所見作成・カスタマイズ版</title>
+    <title>所見作成・カスタマイズ版（令和6年度 国語対応）</title>
     <style>
         body { font-family: -apple-system, sans-serif; padding: 15px; background-color: #f0f2f5; color: #333; }
         .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         
-        /* 戻るボタンのスタイル */
         .back-btn {
             display: inline-block;
             margin-bottom: 15px;
@@ -40,7 +39,6 @@
 <body>
 
 <div class="container">
-    <!-- 追加：戻るリンク -->
     <a href="top.html" class="back-btn">← ポータルへ戻る</a>
     
     <h1>📝 所見作成プロンプト生成</h1>
@@ -121,16 +119,46 @@
 </div>
 
 <script>
-// 初期データ
+// 初期データ（令和6年度版 光村図書 国語 5年・6年）
 const defaultData = [
-    { g: "6", s: "国語", u: "帰り道", goal: "心情の変化を叙述から多角的に捉える能力" },
+    // 5年生 国語
+    { g: "5", s: "国語", u: "なまえつけてよ", goal: "登場人物同士の関わり方や、心の変化を捉えて読み、感想を交流する能力" },
+    { g: "5", s: "国語", u: "見立てる / 言葉の意味がわかること", goal: "事例と主張の関係を整理し、筆者の説明の仕方の工夫（構成）を捉える能力" },
+    { g: "5", s: "国語", u: "みんなが過ごしやすい町へ", goal: "調べたことを事実と感想・意見に区別して整理し、構成を工夫して報告文を書く能力" },
+    { g: "5", s: "国語", u: "日常を十七音で（俳句）", goal: "俳句特有のリズムや季語を知り、身近な出来事から俳句を作る能力" },
+    { g: "5", s: "国語", u: "どちらの立場がいいかな", goal: "目的に合わせて言葉を選び、自分の立場を明確にして話し合い、考えを深める能力" },
+    { g: "5", s: "国語", u: "たずねびと", goal: "場面の移り変わりと主人公の心情の変化を重ね合わせ、物語のメッセージを捉える能力" },
+    { g: "5", s: "国語", u: "議題を決めて話し合おう", goal: "司会や参加者の役割を意識しながら、合意形成を目指して話し合う能力" },
+    { g: "5", s: "国語", u: "大造じいさんとガン", goal: "情景描写が人物の心情に与える影響や、優れた表現を味わい、物語の魅力をまとめる能力" },
+    { g: "5", s: "国語", u: "固有種が教えてくれること", goal: "資料（写真・グラフ）と本文との関係を捉え、図表が果たしている役割を考える能力" },
+    { g: "5", s: "国語", u: "環境問題について報告しよう", goal: "情報を収集・整理し、出典を明記して引用するなど、構成を工夫して報告文を書く能力" },
+    { g: "5", s: "国語", u: "古典の世界（一）", goal: "古典特有のリズムや響きを味わい、昔の人のものの見方や感性に触れる能力" },
+    { g: "5", s: "国語", u: "「和の文化」を受け継ぐ", goal: "筆者の考えを捉え、自分の興味に合わせて和の文化を紹介する文章を作る能力" },
+    { g: "5", s: "国語", u: "伝記（手塚治虫 / アンネ・フランクなど）", goal: "人物の生き方や言葉から、自分の将来や生き方について考えを深める能力" },
+    { g: "5", s: "国語", u: "わらぐつの中の神様", goal: "物語の構成や人物の生き方を捉えて読み、自分の考えをまとめる能力" },
+
+    // 6年生 国語
+    { g: "6", s: "国語", u: "つなぐ言葉 / 春のいぶき", goal: "言葉の響きや役割を意識し、学習の見通しを立てたり古文の感性に触れたりする能力" },
+    { g: "6", s: "国語", u: "帰り道", goal: "二人の登場人物それぞれの視点から読み比べ、人物像や心情の変化を多角的に捉える能力" },
+    { g: "6", s: "国語", u: "笑うから楽しい / 時計の時間と心の時間", goal: "筆者の主張と事例の関係を整理し、論理の展開の仕方を評価しながら読む能力" },
+    { g: "6", s: "国語", u: "私たちにできること", goal: "身の回りの問題について現状と原因を整理し、解決策を論理的に構成して提案する文章を書く能力" },
+    { g: "6", s: "国語", u: "風切るつばさ", goal: "登場人物の相互関係や、心情の変化を叙述に基づいて捉え、人物の生き方について自分の考えを持つ能力" },
+    { g: "6", s: "国語", u: "「鳥獣戯画」を読む / 日本文化発信", goal: "筆者の見方や表現の工夫を捉え、資料を用いて日本の伝統文化を分かりやすく紹介する能力" },
+    { g: "6", s: "国語", u: "言葉を広げよう（熟語等）", goal: "語彙を増やし、文脈の中で適切に言葉を使い分ける能力" },
+    { g: "6", s: "国語", u: "ヒロシマのうた / 平和学習", goal: "作品の時代背景を捉え、人物の生き方や作者の願いを読み取り、平和への考えを深める能力" },
+    { g: "6", s: "国語", u: "きつねの窓", goal: "物語の不思議な世界観を支える叙述や、比喩などの表現の工夫を見つけ、作品の魅力を味わう能力" },
+    { g: "6", s: "国語", u: "伊能忠敬（伝記）", goal: "人物の生き方や事績を捉え、自分の将来の生き方と重ね合わせて考える能力" },
+    { g: "6", s: "国語", u: "海の命", goal: "物語全体の伏線や叙述をもとに、登場人物の生き方や選択について深く読み解き議論する能力" },
+    { g: "6", s: "国語", u: "今、あなたに伝えたいこと", goal: "6年間の学習を振り返り、構成を工夫して自分の思いや決意をスピーチする能力" },
+    { g: "6", s: "国語", u: "大切にしたい言葉", goal: "自分の支えとなる言葉を見つけ、その理由とともにこれからの生活にどう生かすか文章にまとめる能力" },
+
+    // 他教科（サンプル）
     { g: "6", s: "算数", u: "分数のかけ算", goal: "計算の意味を理解し仕方を説明する能力" },
     { g: "6", s: "理科", u: "物の燃え方", goal: "空気の変化を調べ根拠を持って推論する能力" },
     { g: "5", s: "算数", u: "小数のかけ算", goal: "乗数が小数の場合の計算を理解し説明する能力" },
     { g: "all", s: "生活面", u: "責任感", goal: "自分の役割を自覚し最後までやり遂げる態度" }
 ];
 
-// ブラウザ保存用データ読み込み
 let customData = JSON.parse(localStorage.getItem('myCustomUnits')) || [];
 
 function updateUnits() {
@@ -172,7 +200,6 @@ function saveNewUnit() {
     customData.push(newItem);
     localStorage.setItem('myCustomUnits', JSON.stringify(customData));
 
-    // 教科セレクトボックスに新教科がない場合は追加
     const subSel = document.getElementById('subject');
     const exists = Array.from(subSel.options).some(opt => opt.value === s);
     if(!exists) {
@@ -191,50 +218,4 @@ function saveNewUnit() {
 function generate() {
     const sub = document.getElementById('subject').value;
     const unit = document.getElementById('unit').value;
-    const persona = document.querySelector('input[name="persona"]:checked').value;
-    const allData = [...defaultData, ...customData];
-    const goal = allData.find(d => d.u === unit)?.goal || "";
-    const role = document.getElementById('role').value;
-    const epi = document.getElementById('episode').value;
-
-    const subName = (sub === "生活面" || sub === "行事") ? "" : sub + "科";
-    const header = subName ? `${subName}の「${unit}」の学習では、` : `「${unit}」では、`;
-    const body = `${goal}において優れた成果を見せました。${role ? role + 'として活躍し、' : ''}${epi ? epi : '真面目に取り組む'}姿が立派でした。`;
-    
-    document.getElementById('result-text').textContent = header + body;
-    document.getElementById('result-area').style.display = 'block';
-    document.getElementById('prompt-area').style.display = 'none';
-}
-
-function generatePrompt() {
-    const grade = document.getElementById('grade').value;
-    const sub = document.getElementById('subject').value;
-    const unit = document.getElementById('unit').value;
-    const persona = document.querySelector('input[name="persona"]:checked').value;
-    const allData = [...defaultData, ...customData];
-    const goal = allData.find(d => d.u === unit)?.goal || "";
-    const role = document.getElementById('role').value;
-    const epi = document.getElementById('episode').value;
-
-    const subName = (sub === "生活面" || sub === "行事") ? "" : sub + "科";
-
-    const prompt = `あなたは熟練の小学校教師（視点：${persona}）です。
-文頭を『${subName ? subName + "の「" + unit + "」の学習では、" : "「" + unit + "」では、"}』で始め、
-指導要領のねらい（${goal}）と児童の様子（${role}、${epi}）を組み合わせて、
-ポジティブな通知表所見を150文字程度で作成してください。`;
-
-    document.getElementById('prompt-text').textContent = prompt;
-    document.getElementById('prompt-area').style.display = 'block';
-    document.getElementById('result-area').style.display = 'none';
-}
-
-function copyText(id) {
-    const text = document.getElementById(id).innerText;
-    navigator.clipboard.writeText(text);
-    alert("コピーしました。");
-}
-
-window.onload = updateUnits;
-</script>
-</body>
-</html>
+    const persona = document.querySelector('input[name="persona"]:checked')
