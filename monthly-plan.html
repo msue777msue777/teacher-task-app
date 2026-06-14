@@ -9,15 +9,33 @@
         :root { --primary: #2563eb; --bg: #f8fafc; --accent: #8b5cf6; --success: #10b981; }
         body { font-family: sans-serif; background: var(--bg); margin: 0; color: #1e293b; padding-bottom: 50px; }
         header { background: var(--primary); color: white; padding: 1rem; text-align: center; }
-        .auth-bar { background: #0f172a; color: white; padding: 8px 20px; display: flex; justify-content: flex-end; align-items: center; gap: 10px; font-size: 14px; }
+        
+        /* ログインバーの調整 */
+        .auth-bar { 
+            background: #0f172a; 
+            color: white; 
+            padding: 8px 20px; 
+            display: flex; 
+            justify-content: space-between; /* 両端に配置 */
+            align-items: center; 
+            font-size: 14px; 
+        }
+        
         .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         h2 { margin-top: 0; font-size: 1.1rem; border-left: 4px solid var(--primary); padding-left: 10px; margin-bottom: 15px; }
         
         .grid-config { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         input, select, textarea { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
-        button { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .btn-sync { background: #f59e0b; } .btn-weekly { background: var(--accent); } .btn-print { background: var(--success); width: 100%; padding: 12px; font-size: 16px; }
+        
+        /* ボタンのデザイン */
+        button { border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-top { background: #475569; } /* トップへ戻る用のグレー */
+        .btn-auth { background: #1e293b; border: 1px solid #475569; }
+        .btn-primary { background: var(--primary); }
+        .btn-sync { background: #f59e0b; } 
+        .btn-weekly { background: var(--accent); } 
+        .btn-print { background: var(--success); width: 100%; padding: 12px; font-size: 16px; }
         
         table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
         th, td { border: 1px solid #e2e8f0; padding: 6px; text-align: center; }
@@ -40,14 +58,20 @@
 <body>
 
 <div class="auth-bar no-print">
-    <span id="userStatus">ゲスト（未ログイン）</span>
-    <button id="authBtn" onclick="handleAuth()">ログイン</button>
+    <!-- 左側：トップへ戻る -->
+    <button class="btn-top" onclick="location.href='top.html'">← トップページへ戻る</button>
+    
+    <!-- 右側：ログイン状態 -->
+    <div>
+        <span id="userStatus" style="margin-right:10px;">ゲスト（未ログイン）</span>
+        <button id="authBtn" class="btn-auth" onclick="handleAuth()">ログイン</button>
+    </div>
 </div>
 
 <header><h1>月案・時数管理 Pro</h1></header>
 
 <div class="container">
-    
+    <!-- 以降、以前の安定版と同じ -->
     <div class="card no-print">
         <h2>① 基本設定</h2>
         <div class="grid-config">
@@ -69,7 +93,7 @@
             <select id="masterSubjSelect"></select>
             <input id="newUnitName" placeholder="単元名">
             <input id="newUnitHours" type="number" placeholder="時数" style="width:60px;">
-            <button onclick="addUnitMaster()">追加</button>
+            <button class="btn-primary" onclick="addUnitMaster()">追加</button>
         </div>
         <div id="unitMasterList" style="max-height:150px; overflow-y:auto; font-size:12px;"></div>
     </div>
@@ -77,7 +101,7 @@
     <div class="card no-print">
         <h2>④ 曜日別設定 (固定時間割)</h2>
         <div id="editorArea"></div>
-        <button onclick="saveWeeklyConfig()">時間割を保存</button>
+        <button class="btn-primary" onclick="saveWeeklyConfig()">時間割を保存</button>
     </div>
 
     <div class="card no-print">
@@ -113,7 +137,6 @@
 </div>
 
 <script>
-// --- Supabase設定 ---
 const SUPABASE_URL = 'https://klewsfgafeixuvghkkvi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_pexunuSRbbG_3GgfTUovTA_i7iwAHG0';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -125,7 +148,6 @@ let weeklyConfig = { "月":["","","","","",""], "火":["","","","","",""], "水"
 let unitMaster = {};
 let allMonthlyPlans = [];
 
-// ログイン
 async function handleAuth() {
     const email = prompt("メールアドレス:");
     const password = prompt("パスワード(6文字以上):");
@@ -134,7 +156,7 @@ async function handleAuth() {
     if(error) {
         const { error: signUpErr } = await _supabase.auth.signUp({ email, password });
         if(signUpErr) alert("エラー: " + signUpErr.message);
-        else alert("登録しました。再操作してログインしてください。");
+        else alert("登録しました。再ログインしてください。");
     } else { location.reload(); }
 }
 
@@ -149,36 +171,28 @@ async function checkUser() {
     }
 }
 
-// 読み込み（エラーハンドリング強化）
 async function loadAllData() {
     if(!currentUser) return;
     const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
-
     try {
         const { data: conf } = await _supabase.from('weekly_configs').select('config').eq('user_id', currentUser.id).maybeSingle();
         if(conf) weeklyConfig = conf.config;
-
         const { data: master } = await _supabase.from('unit_masters').select('master').eq('user_id', currentUser.id).maybeSingle();
         if(master) unitMaster = master.master;
-
         const { data: plans } = await _supabase.from('monthly_plans').select('year_month, data').eq('user_id', currentUser.id);
         allMonthlyPlans = plans || [];
-
         renderEditor();
         renderUnitMaster();
         createTable();
         renderSummary();
         renderWeeklyPlan();
-    } catch (e) {
-        console.error("データ読込エラー:", e);
-    }
+    } catch (e) { console.error(e); }
 }
 
 function renderSummary() {
     let html = `<table><tr><th>教科</th><th>今月</th><th>累計</th><th>単元と進捗</th></tr>`;
     const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
     const plan = allMonthlyPlans.find(p => p.year_month === ym)?.data || { selectedUnits: {} };
-    
     const monthCounts = calculateMonthCounts(ym);
     const yearlyCounts = calculateYearlyCounts();
 
@@ -187,10 +201,8 @@ function renderSummary() {
         const masters = unitMaster[s] || [];
         const unit = masters.find(u => u.name === selected);
         const progress = unit ? Math.round((yearlyCounts[s] / unit.total) * 100) : 0;
-
         let opts = `<option value="">--選択--</option>`;
         masters.forEach(u => opts += `<option value="${u.name}" ${u.name===selected?'selected':''}>${u.name}</option>`);
-
         html += `<tr><td>${s}</td><td>${monthCounts[s]}</td><td>${yearlyCounts[s]}</td>
             <td><select onchange="saveSelectedUnit('${s}', this.value)">${opts}</select>
             <div class="progress-bg"><div class="progress-fill" style="width:${progress}%"></div></div></td></tr>`;
@@ -238,7 +250,7 @@ function renderUnitMaster() {
                 ${s}:${u.name}(${u.total}h) <button onclick="deleteUnit('${s}',${i})" style="background:red; color:white; border:none; border-radius:3px; cursor:pointer;">×</button></span>`;
         });
     });
-    document.getElementById("unitMasterList").innerHTML = html || "単元が登録されていません";
+    document.getElementById("unitMasterList").innerHTML = html || "単元未登録";
 }
 
 async function addUnitMaster() {
@@ -279,22 +291,19 @@ function createTable() {
     const lastDay = new Date(year, month, 0).getDate();
     const ym = `${year}-${month}`;
     const plan = allMonthlyPlans.find(p => p.year_month === ym)?.data || { events: {}, selectedUnits: {} };
-
     document.getElementById("tableTitle").innerText = `${year}年度 ${month}月 学習予定表`;
     document.getElementById("displayGrade").innerText = `${document.getElementById("grade").value}年生`;
     document.getElementById("displayTeacher").innerText = `担任：${document.getElementById("teacher").value}`;
     document.getElementById("belongings").value = plan.belongings || "";
-
     let html = `<table><tr><th>日</th><th>曜</th><th>行事</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>`;
     for(let d=1; d<=lastDay; d++) {
         const w = weeks[new Date(year, month-1, d).getDay()];
         const dayConfig = weeklyConfig[w] || ["","","","","",""];
         html += `<tr><td>${d}</td><td class="${w==='土'?'sat':(w==='日'?'sun':'')}">${w}</td>
-            <td><input class="event-input" data-day="${d}" value="${plan.events[d]||''}" onchange="saveMonthlyData()"></td>
+            <td><input class="event-input" data-day="${d}" value="${plan.events ? plan.events[d]||'' : ''}" onchange="saveMonthlyData()"></td>
             ${dayConfig.map(s => `<td>${s}</td>`).join('')}</tr>`;
     }
     document.getElementById("tableArea").innerHTML = html + `</table>`;
-    
     let unitSum = "";
     subjects.forEach(s => { if(plan.selectedUnits && plan.selectedUnits[s]) unitSum += `<span>【${s}】${plan.selectedUnits[s]} </span>`; });
     document.getElementById("unitSummaryArea").innerHTML = unitSum;
@@ -306,7 +315,7 @@ async function saveWeeklyConfig() {
         for(let i=0; i<6; i++) weeklyConfig[day].push(document.getElementById(`sel-${day}-${i}`).value);
     });
     await _supabase.from('weekly_configs').upsert({ user_id: currentUser.id, config: weeklyConfig });
-    alert("保存しました");
+    alert("保存完了");
     loadAllData();
 }
 
@@ -327,16 +336,14 @@ function renderWeeklyPlan() {
     const weekNum = Number(document.getElementById("weekSelector").value);
     const ym = `${year}-${month}`;
     const plan = allMonthlyPlans.find(p => p.year_month === ym)?.data || { events: {} };
-
     const days = [];
     const firstDay = new Date(year, month-1, 1).getDay();
     let start = 1 + (weekNum - 1) * 7 - firstDay + 1;
     for(let i=0; i<7; i++) { let d = start+i; if(d>0 && d<=new Date(year, month, 0).getDate()) days.push(d); }
-
     let table = `<table><tr><th>校時</th>`;
     days.forEach(d => table += `<th>${month}/${d}(${weeks[new Date(year, month-1, d).getDay()]})</th>`);
     table += `</tr><tr><td>行事</td>`;
-    days.forEach(d => table += `<td>${plan.events[d]||''}</td>`);
+    days.forEach(d => table += `<td>${plan.events ? plan.events[d]||'' : ''}</td>`);
     for(let i=0; i<6; i++) {
         table += `</tr><tr><td>${i+1}</td>`;
         days.forEach(d => {
