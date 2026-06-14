@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>月案・週案メーカー Pro - 改良版</title>
+    <title>月案・週案メーカー Pro - レイアウト最適化版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* --- 基本デザイン --- */
@@ -35,27 +35,29 @@
         .print-only { display: none; }
 
         @media print {
-            @page { size: A4 portrait; margin: 8mm; }
+            @page { size: A4 portrait; margin: 6mm; }
             body { background: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print, header, .auth-bar, .card:not(.print-target) { display: none !important; }
             .container { max-width: 100%; padding: 0; margin: 0; }
             .card.print-target { box-shadow: none; padding: 0; margin: 0; display: block !important; width: 100%; border: none; }
             
             /* 月案テーブルの調整 */
-            #tableArea table { border: 1.2pt solid black !important; table-layout: fixed; width: 100%; font-size: 8.5pt; }
-            #tableArea th, #tableArea td { border: 0.5pt solid black !important; padding: 1.5px !important; height: 18px; line-height: 1.1; overflow: hidden; }
+            #tableArea table { border: 1.2pt solid black !important; table-layout: fixed; width: 100%; font-size: 8pt; }
+            #tableArea th, #tableArea td { border: 0.5pt solid black !important; padding: 1px !important; height: 17.5px; line-height: 1; }
             
-            /* カラム幅の指定 */
+            /* 列幅の厳密な指定 */
             .col-date { width: 22px; }
             .col-day { width: 22px; }
-            .col-event { width: auto; text-align: left; padding-left: 4px !important; }
-            .col-dismiss { width: 35px; }
-            .col-subj { width: 32px; font-size: 8pt; } /* 1-6時間目の幅を狭く */
+            .col-event { width: auto; text-align: left; padding-left: 3px !important; font-size: 8.5pt; }
+            .col-subj { width: 32px; font-size: 7.5pt; } /* 1-6時間目 */
+            .col-dismiss { width: 35px; font-size: 7.5pt; } /* 下校時刻 */
 
-            .event-input, .dismissal-input { border: none !important; background: transparent !important; font-size: 8.5pt; }
+            .event-input, .dismissal-input { border: none !important; background: transparent !important; font-size: 8.5pt; height: 100%; }
+            .dismissal-input { text-align: center; }
             
-            #unitSummaryArea { font-size: 8pt !important; }
-            #belongings { height: 60px !important; font-size: 9pt !important; border: 0.5pt solid black !important; }
+            #unitSummaryArea { font-size: 7.5pt !important; line-height: 1.2; }
+            #belongings { height: 55px !important; font-size: 9pt !important; border: 0.5pt solid black !important; margin-top: 2px; }
+            #tableTitle { font-size: 16pt !important; margin-bottom: 2px !important; }
         }
 
         /* 週案用 (横向き) */
@@ -92,10 +94,11 @@
     </div>
 
     <div class="card no-print">
-        <h2>② 印刷</h2>
+        <h2>② 印刷設定</h2>
         <div style="display: flex; gap: 20px;">
             <div style="flex: 1; border-right: 1px solid #eee; padding-right: 20px;">
                 <button class="btn-print" onclick="printMonthly()" style="width: 100%;">予定表（月案）を印刷</button>
+                <p style="font-size: 11px; color: #666; margin-top: 5px;">※A4縦1枚に収まるよう自動調整されます</p>
             </div>
             <div style="flex: 1.5;">
                 週を選択: <select id="weekSelector" onchange="renderWeeklyPlan()">
@@ -120,16 +123,16 @@
     <!-- 印刷用：月案（予定表） -->
     <div class="card print-target" id="monthlyPrintSection">
         <h2 id="tableTitle" style="text-align:center; font-size: 18pt; margin: 0 0 5px 0;">学習予定表</h2>
-        <div style="display:flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; font-size: 10pt;">
+        <div style="display:flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; font-size: 10pt;">
             <div id="displayGrade">5年生</div>
             <div id="displayTeacher">担任：山田 太郎</div>
         </div>
         <div id="tableArea"></div>
-        <div style="margin-top:8px; border: 1pt solid black; padding: 5px;">
-            <strong style="font-size: 9pt;">【今月の学習単元】</strong>
-            <div id="unitSummaryArea" style="font-size: 8.5pt; margin-top: 2px;"></div>
-            <div style="margin-top:5px;"><strong style="font-size: 9pt;">【持ち物・連絡事項】</strong></div>
-            <textarea id="belongings" style="width:100%; height:70px; border:none; outline:none; font-family: inherit; font-size: 10pt; line-height:1.4;" onchange="saveMonthlyData()"></textarea>
+        <div style="margin-top:5px; border: 1pt solid black; padding: 4px;">
+            <strong style="font-size: 8.5pt;">【今月の学習単元】</strong>
+            <div id="unitSummaryArea" style="font-size: 8pt; margin-top: 1px;"></div>
+            <div style="margin-top:3px;"><strong style="font-size: 8.5pt;">【持ち物・連絡事項】</strong></div>
+            <textarea id="belongings" style="width:100%; height:60px; border:none; outline:none; font-family: inherit; font-size: 9.5pt; line-height:1.3;" onchange="saveMonthlyData()"></textarea>
         </div>
     </div>
 
@@ -287,13 +290,13 @@ function createTable() {
         <th class="col-date">日</th>
         <th class="col-day">曜</th>
         <th class="col-event">行事・予定</th>
-        <th class="col-dismiss">下校</th>
         <th class="col-subj">1</th>
         <th class="col-subj">2</th>
         <th class="col-subj">3</th>
         <th class="col-subj">4</th>
         <th class="col-subj">5</th>
         <th class="col-subj">6</th>
+        <th class="col-dismiss">下校</th>
     </tr></thead><tbody>`;
 
     for(let d=1; d<=lastDay; d++) {
@@ -306,8 +309,8 @@ function createTable() {
             <td class="col-date">${d}</td>
             <td class="col-day ${w==='土'?'sat':(w==='日'?'sun':'')}">${w}</td>
             <td class="col-event"><input class="event-input" data-day="${d}" value="${eventVal}" onchange="saveMonthlyData()"></td>
-            <td class="col-dismiss"><input class="dismissal-input" data-day="${d}" value="${dismissVal}" onchange="saveMonthlyData()"></td>
             ${dayConfig.map(s => `<td class="col-subj" style="background:${getSubjColor(s)}">${s}</td>`).join('')}
+            <td class="col-dismiss"><input class="dismissal-input" data-day="${d}" value="${dismissVal}" onchange="saveMonthlyData()" placeholder="-"></td>
         </tr>`;
     }
     html += `</tbody></table>`;
@@ -316,7 +319,7 @@ function createTable() {
     let unitSum = "";
     subjects.forEach(s => { 
         if(plan.selectedUnits && plan.selectedUnits[s]) 
-            unitSum += `<span style="background:${getSubjColor(s)}; padding:1px 3px; margin:1px; border-radius:2px; border:0.5px solid #ccc;">【${s}】${plan.selectedUnits[s]} </span>`; 
+            unitSum += `<span style="background:${getSubjColor(s)}; padding:1px 3px; margin:1px; border-radius:2px; border:0.1pt solid #999;">【${s}】${plan.selectedUnits[s]} </span>`; 
     });
     document.getElementById("unitSummaryArea").innerHTML = unitSum;
 }
@@ -343,7 +346,7 @@ async function saveMonthlyData() {
     const newData = { ...old, events, dismissals, belongings };
     
     await _supabase.from('monthly_plans').upsert({ user_id: currentUser.id, year_month: ym, data: newData });
-    // ローカルデータを更新して再描画（同期待ちを避ける）
+    
     const index = allMonthlyPlans.findIndex(p => p.year_month === ym);
     if(index > -1) allMonthlyPlans[index].data = newData;
     else allMonthlyPlans.push({ year_month: ym, data: newData });
