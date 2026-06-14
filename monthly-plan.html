@@ -1,312 +1,261 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>月案・週案メーカー Pro - Phase 6</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>月案メーカー Pro - Cloud</title>
+    <!-- Supabase JS 読み込み -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; }
+        body { font-family: "Helvetica Neue", Arial, sans-serif; background: var(--bg); margin: 0; color: #1e293b; padding-bottom: 50px; }
+        header { background: var(--primary); color: white; padding: 1rem; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .auth-bar { background: #0f172a; color: white; padding: 8px 20px; display: flex; justify-content: flex-end; align-items: center; gap: 10px; font-size: 14px; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; font-size: 1.1rem; border-left: 4px solid var(--primary); padding-left: 10px; margin-bottom: 15px; }
+        
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        input, select, textarea { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
+        button { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .btn-sync { background: #f59e0b; }
+        .btn-print { background: #10b981; width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; }
+        .btn-weekly { background: #8b5cf6; }
 
-<style>
-/* --- 共通スタイル --- */
-body { font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif; background: #f5f7fa; margin: 0; color: #333; }
-header { background: #2563eb; color: white; text-align: center; padding: 15px; }
-.container { max-width: 1300px; margin: auto; padding: 20px; }
-.card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-h2 { margin-top: 0; font-size: 1.2rem; border-left: 5px solid #2563eb; padding-left: 10px; margin-bottom: 15px; }
-.grid-config { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-input, select, textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-button { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-button:hover { background: #1d4ed8; }
-.btn-print { background: #059669; }
-.btn-weekly { background: #8b5cf6; } /* 紫色の週案ボタン */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; }
+        th { background: #f1f5f9; font-weight: 600; }
+        .sat { background: #eff6ff; color: #1d4ed8; }
+        .sun { background: #fef2f2; color: #dc2626; }
+        .event-input { width: 100%; border: none; text-align: center; background: transparent; font-size: 14px; }
+        
+        .no-print { display: block; }
+        .print-only { display: none; }
 
-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
-th, td { border: 1px solid #000; padding: 6px; text-align: center; }
-th { background: #f0f4ff; }
-.input-cell { width: 95%; border: none; text-align: center; background: transparent; }
-
-/* --- 印刷制御 --- */
-@media screen {
-    .print-only { display: none; }
-}
-
-@media print {
-    header, .no-print, button, .back, .card:not(.print-target) { display: none !important; }
-    body { background: white; }
-    .container { width: 100%; max-width: none; padding: 0; }
-    .card.print-target { box-shadow: none; padding: 0; border: none; display: block !important; }
-    
-    /* 週案印刷時は横向きを推奨（ブラウザ設定による） */
-    @page { size: A4 landscape; margin: 10mm; }
-    .weekly-print-table { font-size: 9pt; }
-}
-
-/* 週末の色 */
-.sat { background: #e0f2fe !important; }
-.sun { background: #fee2e2 !important; }
-</style>
+        @media print {
+            .no-print, header, .auth-bar, .card:not(.print-target) { display: none !important; }
+            body { background: white; }
+            .container { max-width: 100%; padding: 0; margin: 0; }
+            .card.print-target { box-shadow: none; padding: 0; border: none; display: block !important; }
+            table { font-size: 10pt; border: 1pt solid black; }
+            th, td { border: 0.5pt solid black; }
+            @page { size: A4 portrait; margin: 10mm; }
+        }
+    </style>
 </head>
-
 <body>
 
-<header>
-    <h1>月案・週案メーカー Pro</h1>
-</header>
+<div class="auth-bar no-print">
+    <span id="userStatus">ゲスト（未ログイン）</span>
+    <button id="authBtn" onclick="handleAuth()">ログイン / 新規登録</button>
+</div>
+
+<header><h1>月案・週案メーカー Pro</h1></header>
 
 <div class="container">
-    <a href="#" class="back no-print">← トップへ戻る</a>
-
-    <!-- ① 基本設定 -->
     <div class="card no-print">
-        <h2>① 基本設定</h2>
-        <div class="grid-config">
-            <div>学年: <select id="grade"><option>4年</option><option selected>5年</option><option>6年</option></select></div>
-            <div>担任: <input id="teacher" value="山田 太郎"></div>
-            <div>年月: <input id="year" type="number" value="2026" style="width:70px;">年 <input id="month" type="number" value="6" style="width:50px;">月</div>
-            <button onclick="updateAll()">表示を更新</button>
+        <h2>1. 基本設定</h2>
+        <div class="grid-3">
+            <div>年月: <input id="year" type="number" value="2026" style="width:70px;" onchange="createTable()"> 年 
+                       <input id="month" type="number" value="6" style="width:50px;" onchange="createTable()"> 月</div>
+            <div>担任: <input id="teacher" value="山田 太郎" onchange="createTable()"></div>
+            <button class="btn-sync" onclick="loadAllData()">クラウドから同期</button>
         </div>
     </div>
 
-    <!-- ⑥ 週案表示エリア（新設） -->
     <div class="card no-print">
-        <h2>⑥ 週案作成（教務提出用）</h2>
-        <div style="margin-bottom:15px;">
-            表示する週：
-            <select id="weekSelector" onchange="renderWeeklyPlan()">
-                <option value="1">第1週</option>
-                <option value="2">第2週</option>
-                <option value="3">第3週</option>
-                <option value="4">第4週</option>
-                <option value="5">第5週</option>
-            </select>
-            <button class="btn-weekly" onclick="printWeekly()">週案を印刷 (A4横)</button>
-        </div>
-        <div id="weeklyPlanPreview"></div>
+        <h2>2. 週案作成 (提出用)</h2>
+        週を選択：
+        <select id="weekSelector" onchange="renderWeeklyPlan()">
+            <option value="1">第1週</option><option value="2">第2週</option><option value="3">第3週</option><option value="4">第4週</option><option value="5">第5週</option>
+        </select>
+        <button class="btn-weekly" onclick="printWeekly()">週案を印刷 (A4横推奨)</button>
     </div>
 
-    <!-- ② 固定時間割 -->
     <div class="card no-print">
-        <h2>② 曜日別設定（固定時間割）</h2>
-        <table id="timetableEditor"></table>
-        <button onclick="saveWeeklyConfig()">曜日設定を保存</button>
+        <h2>3. 固定時間割設定</h2>
+        <div id="editorArea"></div>
+        <button onclick="saveWeeklyConfig()" style="margin-top:10px;">時間割をクラウドに保存</button>
     </div>
 
-    <!-- ③ & ⑤ 時数・単元管理 -->
-    <div class="card no-print">
-        <h2>③・⑤ 進捗管理</h2>
-        <div id="hoursManagementArea"></div>
-    </div>
-
-    <!-- 児童用予定表の印刷 -->
     <button class="btn-print no-print" onclick="window.print()">学習予定表(児童用)を印刷</button>
 
-    <!-- 印刷用：学習予定表（月案） -->
+    <!-- 印刷用：学習予定表 -->
     <div class="card print-target" id="monthlyPrintSection">
-        <h2 id="tableTitle">学習予定表</h2>
+        <h2 id="tableTitle" style="text-align:center; font-size: 1.5rem;">学習予定表</h2>
         <div style="display:flex; justify-content: space-between; margin-bottom: 5px;">
-            <div id="displayTarget"></div>
-            <div id="displayTeacher"></div>
+            <div id="displayGrade">5年生</div>
+            <div id="displayTeacher">担任：山田 太郎</div>
         </div>
         <div id="tableArea"></div>
-        <div id="unitSummaryArea" style="font-size:11px; margin-top:10px; border:1px solid #000; padding:5px;"></div>
-        <textarea id="belongingsArea" style="width:100%; min-height:60px; margin-top:10px; border:1px solid #000;" onchange="saveMonthlyData()"></textarea>
+        <div style="margin-top: 20px; border: 1px solid #333; padding: 10px;">
+            <strong>【持ち物・連絡事項】</strong><br>
+            <textarea id="belongings" style="width:100%; height:80px; border:none; resize:none;" onchange="saveMonthlyData()"></textarea>
+        </div>
     </div>
 
-    <!-- 印刷用：週案（隠し要素） -->
+    <!-- 印刷用：週案（隠し） -->
     <div id="weeklyPrintSection" class="card print-target print-only">
-        <h2 id="weeklyPrintTitle">週指導計画（週案）</h2>
+        <h2 id="weeklyPrintTitle" style="text-align:center;">週指導計画</h2>
         <div id="weeklyPrintTableArea"></div>
     </div>
-
 </div>
 
 <script>
-// --- 基本データ ---
+// --- Supabase設定 ---
+const SUPABASE_URL = 'https://klewsfgafeixuvghkkvi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_pexunuSRbbG_3GgfTUovTA_i7iwAHG0';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
 const subjects = ["国語","算数","理科","社会","体育","音楽","図工","家庭","外国語","総合","学活","道徳"];
-const weekNames = ["日","月","火","水","木","金","土"];
-
-let weeklyConfig = JSON.parse(localStorage.getItem("weeklyConfig")) || {
-    "月": { lessons: ["国語","算数","理科","社会","体育",""], dismissal: "15:20" },
-    "火": { lessons: ["算数","国語","音楽","体育","総合",""], dismissal: "15:20" },
-    "水": { lessons: ["国語","算数","理科","社会","",""], dismissal: "14:30" },
-    "木": { lessons: ["算数","国語","図工","社会","総合",""], dismissal: "15:20" },
-    "金": { lessons: ["国語","算数","理科","学活","体育",""], dismissal: "15:20" },
-    "土": { lessons: ["","","","","",""], dismissal: "" },
-    "日": { lessons: ["","","","","",""], dismissal: "" }
+const weeks = ["日","月","火","水","木","金","土"];
+let weeklyConfig = { 
+    "月":["","","","","",""], "火":["","","","","",""], 
+    "水":["","","","","",""], "木":["","","","","",""], 
+    "金":["","","","","",""], "土":["","","","","",""], "日":["","","","","",""] 
 };
-let monthlyData = JSON.parse(localStorage.getItem("monthlyData")) || {};
-let unitMaster = JSON.parse(localStorage.getItem("unitMaster")) || {};
 
-function init(){
-    renderWeeklyEditor();
-    createTable();
+async function handleAuth() {
+    const email = prompt("メールアドレスを入力:");
+    const password = prompt("パスワード(6文字以上):");
+    if(!email || !password) return;
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+    if(error) {
+        const { error: signUpErr } = await _supabase.auth.signUp({ email, password });
+        if(signUpErr) alert("認証エラー: " + signUpErr.message);
+        else alert("登録しました。メールを確認するか、そのままログインしてください。");
+    } else { location.reload(); }
+}
+
+async function checkUser() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (session) {
+        currentUser = session.user;
+        document.getElementById("userStatus").innerText = currentUser.email + " でログイン中";
+        document.getElementById("authBtn").innerText = "ログアウト";
+        document.getElementById("authBtn").onclick = () => { _supabase.auth.signOut(); location.reload(); };
+        loadAllData();
+    }
+}
+
+async function loadAllData() {
+    if(!currentUser) return;
+    const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
+    
+    // 時間割取得
+    const { data: conf } = await _supabase.from('weekly_configs').select('config').eq('user_id', currentUser.id).single();
+    if(conf) weeklyConfig = conf.config;
+    
+    // 月案データ取得
+    const { data: plan } = await _supabase.from('monthly_plans').select('data').eq('user_id', currentUser.id).eq('year_month', ym).single();
+    
+    renderEditor();
+    createTable(plan?.data?.events || {});
+    if(plan?.data?.belongings) document.getElementById("belongings").value = plan.data.belongings;
     renderWeeklyPlan();
 }
 
-// 固定時間割エディタ
-function renderWeeklyEditor(){
-    let html = `<tr><th>曜日</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>下校</th></tr>`;
-    ["月","火","水","木","金","土"].forEach(day => {
-        html += `<tr><td>${day}</td>`;
-        for(let i=0; i<6; i++){
-            html += `<td><select id="t-${day}-${i}" style="width:60px;"><option value=""></option>`;
-            subjects.forEach(s => html += `<option value="${s}" ${weeklyConfig[day].lessons[i]===s?"selected":""}>${s}</option>`);
-            html += `</select></td>`;
-        }
-        html += `<td><input id="d-${day}" value="${weeklyConfig[day].dismissal}" style="width:50px;"></td></tr>`;
+async function saveWeeklyConfig() {
+    if(!currentUser) return alert("ログインが必要です");
+    ["月","火","水","木","金"].forEach(day => {
+        for(let i=0; i<6; i++) weeklyConfig[day][i] = document.getElementById(`sel-${day}-${i}`).value;
     });
-    document.getElementById("timetableEditor").innerHTML = html;
-}
-
-function saveWeeklyConfig(){
-    ["月","火","水","木","金","土"].forEach(day => {
-        for(let i=0; i<6; i++) weeklyConfig[day].lessons[i] = document.getElementById(`t-${day}-${i}`).value;
-        weeklyConfig[day].dismissal = document.getElementById(`d-${day}`).value;
-    });
-    localStorage.setItem("weeklyConfig", JSON.stringify(weeklyConfig));
-    updateAll();
-}
-
-// 月案・予定表の生成
-function createTable(){
-    const year = Number(document.getElementById("year").value);
-    const month = Number(document.getElementById("month").value);
-    const monthKey = `${year}-${month}`;
-    const lastDay = new Date(year, month, 0).getDate();
-    const currentMonthData = monthlyData[monthKey] || { events: {}, belongings: "", selectedUnits: {} };
-
-    document.getElementById("tableTitle").innerText = `${year}年度 ${month}月 学習予定表`;
-    document.getElementById("displayTarget").innerText = `${document.getElementById("grade").value}年生`;
-    document.getElementById("displayTeacher").innerText = `担任：${document.getElementById("teacher").value}`;
-    document.getElementById("belongingsArea").value = currentMonthData.belongings || "";
-
-    let tableHtml = `<table><tr><th>日</th><th>曜</th><th>行事など</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>下校</th></tr>`;
-    const actualCount = {};
-
-    for(let d=1; d<=lastDay; d++){
-        const date = new Date(year, month-1, d);
-        const week = weekNames[date.getDay()];
-        const config = weeklyConfig[week];
-        tableHtml += `<tr><td>${d}</td><td class="${week==='日'?'sun':(week==='土'?'sat':'')}">${week}</td>
-            <td><input class="input-cell" id="ev-${d}" value="${currentMonthData.events[d]||''}" onchange="saveMonthlyData()"></td>`;
-        for(let i=0; i<6; i++){
-            const s = config.lessons[i];
-            tableHtml += `<td style="width:55px;">${s}</td>`;
-            if(s) actualCount[s] = (actualCount[s]||0) + 1;
-        }
-        tableHtml += `<td>${config.dismissal}</td></tr>`;
-    }
-    document.getElementById("tableArea").innerHTML = tableHtml + "</table>";
-    renderHoursAndUnits(actualCount, currentMonthData);
-    renderWeeklyPlan(); // 月案が変われば週案も更新
-}
-
-// 週案の生成
-function renderWeeklyPlan(){
-    const year = Number(document.getElementById("year").value);
-    const month = Number(document.getElementById("month").value);
-    const weekNum = Number(document.getElementById("weekSelector").value);
-    const monthKey = `${year}-${month}`;
-    const currentMonthData = monthlyData[monthKey] || { events: {}, selectedUnits: {} };
-
-    // その月の「第n週」の日付リストを取得
-    const daysInWeek = [];
-    const firstDayOfMonth = new Date(year, month-1, 1).getDay(); // 初日の曜日
-    let startDay = 1 + (weekNum - 1) * 7 - firstDayOfMonth + 1;
-    // 月曜始まりに調整したい場合はここを調整するが、簡易的に7日分取得
-    for(let i=0; i<7; i++){
-        let d = startDay + i;
-        if(d > 0 && d <= new Date(year, month, 0).getDate()){
-            daysInWeek.push(d);
-        }
-    }
-
-    if(daysInWeek.length === 0) {
-        document.getElementById("weeklyPlanPreview").innerHTML = "該当する日付がありません。";
-        return;
-    }
-
-    let head = `<tr><th>校時</th>`;
-    daysInWeek.forEach(d => {
-        const w = weekNames[new Date(year, month-1, d).getDay()];
-        head += `<th class="${w==='日'?'sun':(w==='土'?'sat':'')}">${month}/${d}(${w})</th>`;
-    });
-    head += `</tr>`;
-
-    let body = "";
-    // 行事行
-    body += `<tr><td>行事</td>`;
-    daysInWeek.forEach(d => body += `<td>${currentMonthData.events[d] || ""}</td>`);
-    body += `</tr>`;
-
-    // 1〜6校時
-    for(let i=0; i<6; i++){
-        body += `<tr><td>${i+1}</td>`;
-        daysInWeek.forEach(d => {
-            const w = weekNames[new Date(year, month-1, d).getDay()];
-            const subj = weeklyConfig[w].lessons[i];
-            const unit = (currentMonthData.selectedUnits && currentMonthData.selectedUnits[subj]) || "";
-            body += `<td><div style="font-weight:bold;">${subj}</div><div style="font-size:10px; color:#666;">${unit}</div></td>`;
-        });
-        body += `</tr>`;
-    }
-
-    const tableHtml = `<table class="weekly-print-table">${head}${body}</table>`;
-    document.getElementById("weeklyPlanPreview").innerHTML = tableHtml;
-    document.getElementById("weeklyPrintTableArea").innerHTML = tableHtml;
-    document.getElementById("weeklyPrintTitle").innerText = `${year}年度 ${month}月 第${weekNum}週 週指導計画（${document.getElementById("grade").value} / ${document.getElementById("teacher").value}）`;
-}
-
-// 印刷用：週案
-function printWeekly(){
-    // 印刷時に月案セクションを隠し、週案セクションを表示する
-    document.getElementById("monthlyPrintSection").classList.add("print-only");
-    document.getElementById("weeklyPrintSection").classList.remove("print-only");
-    window.print();
-    // 印刷ダイアログを閉じたあとに戻す
-    document.getElementById("monthlyPrintSection").classList.remove("print-only");
-    document.getElementById("weeklyPrintSection").classList.add("print-only");
-}
-
-// (既存) 時数・単元管理の描画
-function renderHoursAndUnits(actualCount, currentMonthData){
-    let html = `<table><tr><th>教科</th><th>月実施</th><th>指導単元(今月)</th></tr>`;
-    let unitSummaryHtml = "";
-    subjects.forEach(s => {
-        const act = actualCount[s] || 0;
-        const selectedUnitName = currentMonthData.selectedUnits ? currentMonthData.selectedUnits[s] : "";
-        let unitOptions = `<option value="">--未選択--</option>`;
-        if(unitMaster[s]){
-            unitMaster[s].forEach(u => {
-                unitOptions += `<option value="${u.name}" ${u.name===selectedUnitName?'selected':''}>${u.name}</option>`;
-            });
-        }
-        html += `<tr><td>${s}</td><td>${act}</td><td><select id="selUnit-${s}" onchange="saveMonthlyData()">${unitOptions}</select></td></tr>`;
-        if(selectedUnitName) unitSummaryHtml += `<span>【${s}】${selectedUnitName} </span> `;
-    });
-    document.getElementById("hoursManagementArea").innerHTML = html + "</table>";
-    document.getElementById("unitSummaryArea").innerHTML = unitSummaryHtml;
-}
-
-function saveMonthlyData(){
-    const year = document.getElementById("year").value;
-    const month = document.getElementById("month").value;
-    const monthKey = `${year}-${month}`;
-    const lastDay = new Date(year, month, 0).getDate();
-    const events = {};
-    for(let d=1; d<=lastDay; d++) {
-        const val = document.getElementById(`ev-${d}`).value;
-        if(val) events[d] = val;
-    }
-    const selectedUnits = {};
-    subjects.forEach(s => { selectedUnits[s] = document.getElementById(`selUnit-${s}`).value; });
-    monthlyData[monthKey] = { events, belongings: document.getElementById("belongingsArea").value, selectedUnits };
-    localStorage.setItem("monthlyData", JSON.stringify(monthlyData));
+    await _supabase.from('weekly_configs').upsert({ user_id: currentUser.id, config: weeklyConfig });
+    alert("クラウドに時間割を保存しました");
     createTable();
 }
 
-function updateAll(){ createTable(); }
+async function saveMonthlyData() {
+    if(!currentUser) return;
+    const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
+    const events = {};
+    document.querySelectorAll(".event-input").forEach(input => { if(input.value) events[input.dataset.day] = input.value; });
+    const dataToSave = { events, belongings: document.getElementById("belongings").value };
+    await _supabase.from('monthly_plans').upsert({ user_id: currentUser.id, year_month: ym, data: dataToSave });
+    renderWeeklyPlan();
+}
 
-init();
+function renderEditor() {
+    let html = `<table><tr><th>曜日</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>`;
+    ["月","火","水","木","金"].forEach(day => {
+        html += `<tr><th>${day}</th>`;
+        for(let i=0; i<6; i++) {
+            html += `<td><select id="sel-${day}-${i}" style="width:100%"><option value=""></option>`;
+            subjects.forEach(s => html += `<option value="${s}" ${weeklyConfig[day][i]===s?'selected':''}>${s}</option>`);
+            html += `</select></td>`;
+        }
+        html += `</tr>`;
+    });
+    document.getElementById("editorArea").innerHTML = html + `</table>`;
+}
+
+function createTable(loadedEvents = {}) {
+    const year = document.getElementById("year").value;
+    const month = document.getElementById("month").value;
+    const lastDay = new Date(year, month, 0).getDate();
+    document.getElementById("tableTitle").innerText = `${year}年 ${month}月 学習予定表`;
+    document.getElementById("displayTeacher").innerText = `担任：${document.getElementById("teacher").value}`;
+    
+    let html = `<table><tr><th>日</th><th>曜</th><th>行事・予定</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>`;
+    for(let d=1; d<=lastDay; d++) {
+        const date = new Date(year, month-1, d);
+        const w = weeks[date.getDay()];
+        const dayConfig = weeklyConfig[w] || ["","","","","",""];
+        html += `<tr>
+            <td style="width:30px">${d}</td><td class="${w==='土'?'sat':(w==='日'?'sun':'')}" style="width:30px">${w}</td>
+            <td><input class="event-input" data-day="${d}" value="${loadedEvents[d]||''}" onchange="saveMonthlyData()"></td>
+            ${dayConfig.map(s => `<td style="width:60px">${s}</td>`).join('')}
+        </tr>`;
+    }
+    document.getElementById("tableArea").innerHTML = html + `</table>`;
+}
+
+function renderWeeklyPlan() {
+    const year = Number(document.getElementById("year").value);
+    const month = Number(document.getElementById("month").value);
+    const weekNum = Number(document.getElementById("weekSelector").value);
+    
+    const daysInWeek = [];
+    const firstDayOfMonth = new Date(year, month-1, 1).getDay(); 
+    let startDay = 1 + (weekNum - 1) * 7 - firstDayOfMonth + 1;
+    for(let i=0; i<7; i++){
+        let d = startDay + i;
+        if(d > 0 && d <= new Date(year, month, 0).getDate()) daysInWeek.push(d);
+    }
+    if(daysInWeek.length === 0) return;
+
+    let table = `<table><tr><th>校時</th>`;
+    daysInWeek.forEach(d => {
+        const w = weeks[new Date(year, month-1, d).getDay()];
+        table += `<th class="${w==='土'?'sat':(w==='日'?'sun':'')}">${month}/${d}(${w})</th>`;
+    });
+    table += `</tr>`;
+
+    for(let i=0; i<6; i++){
+        table += `<tr><td>${i+1}</td>`;
+        daysInWeek.forEach(d => {
+            const w = weeks[new Date(year, month-1, d).getDay()];
+            table += `<td>${weeklyConfig[w] ? weeklyConfig[w][i] : ''}</td>`;
+        });
+        table += `</tr>`;
+    }
+    document.getElementById("weeklyPrintTableArea").innerHTML = table + `</table>`;
+    document.getElementById("weeklyPrintTitle").innerText = `${year}年度 ${month}月 第${weekNum}週 週指導計画`;
+}
+
+function printWeekly() {
+    document.getElementById("monthlyPrintSection").classList.add("no-print");
+    document.getElementById("weeklyPrintSection").classList.remove("print-only");
+    window.print();
+    document.getElementById("monthlyPrintSection").classList.remove("no-print");
+    document.getElementById("weeklyPrintSection").classList.add("print-only");
+}
+
+checkUser();
+renderEditor();
+createTable();
 </script>
 </body>
 </html>
