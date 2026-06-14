@@ -3,84 +3,128 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>月案メーカー</title>
+<title>月案メーカー Pro - Phase 2</title>
 
 <style>
-
-body{
-    font-family:sans-serif;
-    background:#f5f7fa;
-    margin:0;
+/* 基本スタイル */
+body {
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    background: #f5f7fa;
+    margin: 0;
+    color: #333;
 }
 
-header{
-    background:#2563eb;
-    color:white;
-    text-align:center;
-    padding:20px;
+header {
+    background: #2563eb;
+    color: white;
+    text-align: center;
+    padding: 15px;
 }
 
-.container{
-    max-width:1400px;
-    margin:auto;
-    padding:20px;
+.container {
+    max-width: 1000px;
+    margin: auto;
+    padding: 20px;
 }
 
-.card{
-    background:white;
-    border-radius:12px;
-    padding:15px;
-    margin-bottom:20px;
-    box-shadow:0 2px 8px rgba(0,0,0,.08);
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
 }
 
-h2{
-    margin-top:0;
+h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+    border-left: 5px solid #2563eb;
+    padding-left: 10px;
 }
 
-input,select{
-    padding:5px;
-    margin:3px;
+.grid-config {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 10px;
 }
 
-button{
-    background:#2563eb;
-    color:white;
-    border:none;
-    padding:10px 15px;
-    border-radius:8px;
-    cursor:pointer;
+input, select, textarea {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
 }
 
-button:hover{
-    opacity:0.9;
+button {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
 }
 
-table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:14px;
+button:hover {
+    background: #1d4ed8;
 }
 
-th,td{
-    border:1px solid #ccc;
-    padding:4px;
-    text-align:center;
+.btn-print {
+    background: #059669;
+    margin-bottom: 20px;
 }
 
-.event{
-    width:150px;
+/* テーブルスタイル */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: #white;
 }
 
-.lesson-input{
-    width:80px;
+th, td {
+    border: 1px solid #000;
+    padding: 4px;
+    text-align: center;
 }
 
-.back{
-    text-decoration:none;
-    font-weight:bold;
-    color:#2563eb;
+th {
+    background: #f0f4ff;
 }
+
+.input-cell {
+    width: 95%;
+    border: none;
+    text-align: center;
+    background: transparent;
+}
+
+.lesson-cell { width: 45px; }
+
+/* 持ち物エリア */
+#belongingsArea {
+    width: 100%;
+    min-height: 80px;
+}
+
+/* 印刷用設定 */
+@media print {
+    header, .no-print, button, .back, .card:not(.print-target) {
+        display: none !important;
+    }
+    body { background: white; }
+    .container { width: 100%; max-width: none; padding: 0; }
+    .card.print-target {
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+    }
+    table { font-size: 11pt; }
+    .input-cell { border: none; }
+}
+
+.back { text-decoration: none; color: #2563eb; font-weight: bold; margin-bottom: 10px; display: inline-block; }
 
 </style>
 </head>
@@ -88,292 +132,197 @@ th,td{
 <body>
 
 <header>
-<h1>月案メーカー</h1>
+    <h1>月案メーカー</h1>
 </header>
 
 <div class="container">
 
-<a href="top.html" class="back">← トップへ戻る</a>
+    <a href="#" class="back no-print">← トップへ戻る</a>
 
-<div class="card">
+    <div class="card no-print">
+        <h2>① 基本設定</h2>
+        <div class="grid-config">
+            <div>学年: 
+                <select id="grade">
+                    <option>1年</option><option>2年</option><option>3年</option>
+                    <option>4年</option><option selected>5年</option><option>6年</option>
+                </select>
+            </div>
+            <div>担任: <input id="teacher" placeholder="氏名"></div>
+            <div>年月: 
+                <input id="year" type="number" value="2026" style="width:70px;"> 年 
+                <input id="month" type="number" value="6" style="width:50px;"> 月
+            </div>
+        </div>
+        <button onclick="updateAll()">設定を反映</button>
+    </div>
 
-<h2>基本設定</h2>
+    <div class="card no-print">
+        <h2>② 曜日別設定（固定時間割・下校）</h2>
+        <table id="timetableEditor"></table>
+        <br>
+        <button onclick="saveWeeklyConfig()">曜日設定を保存</button>
+    </div>
 
-学年
-<select id="grade">
-<option>4年</option>
-<option selected>5年</option>
-<option>6年</option>
-</select>
+    <button class="btn-print no-print" onclick="window.print()">このページを印刷する (A4縦)</button>
 
-担任
-<input id="teacher">
+    <div class="card print-target">
+        <h2 id="tableTitle">学習予定表</h2>
+        <div id="printHeader" style="display:flex; justify-content: space-between; margin-bottom: 10px;">
+            <div id="displayTarget"></div>
+            <div id="displayTeacher"></div>
+        </div>
 
-年
-<input id="year" type="number" value="2026" style="width:80px;">
+        <div id="tableArea"></div>
 
-月
-<input id="month" type="number" value="6" style="width:60px;">
+        <div style="margin-top: 20px;">
+            <h3>【持ち物・連絡事項】</h3>
+            <textarea id="belongingsArea" placeholder="例：・月曜：水泳セット ・習字道具（木）" onchange="saveMonthlyData()"></textarea>
+        </div>
+    </div>
 
-<button onclick="createTable()">
-月案作成
-</button>
-
-</div>
-
-<div class="card">
-
-<h2>固定時間割</h2>
-
-<table id="timetableEditor"></table>
-
-<br>
-
-<button onclick="saveTimetable()">
-時間割を保存
-</button>
-
-</div>
-
-<div class="card">
-
-<h2>児童配布用 学習予定表</h2>
-
-<div id="tableArea"></div>
-
-</div>
-
-<div class="card">
-
-<h2>時数集計</h2>
-
-<div id="hoursArea"></div>
-
-</div>
+    <div class="card no-print">
+        <h2>③ 時数集計（参考）</h2>
+        <div id="hoursArea"></div>
+    </div>
 
 </div>
 
 <script>
+// --- 初期データ ---
+const subjects = ["","国語","算数","理科","社会","体育","音楽","図工","家庭","外国語","総合","学活","道徳"];
+const weekNames = ["日","月","火","水","木","金","土"];
 
-const subjects = [
-"",
-"国語",
-"算数",
-"理科",
-"社会",
-"体育",
-"音楽",
-"図工",
-"家庭",
-"外国語",
-"総合",
-"学活",
-"道徳"
-];
-
-let timetable =
-JSON.parse(localStorage.getItem("timetable")) || {
-"月":["国語","算数","理科","社会","体育",""],
-"火":["算数","国語","音楽","体育","総合",""],
-"水":["国語","算数","理科","社会","",""],
-"木":["算数","国語","図工","社会","総合",""],
-"金":["国語","算数","理科","学活","体育",""]
+// 曜日別設定のデフォルト
+let weeklyConfig = JSON.parse(localStorage.getItem("weeklyConfig")) || {
+    "月": { lessons: ["国語","算数","理科","社会","体育",""], dismissal: "15:20" },
+    "火": { lessons: ["算数","国語","音楽","体育","総合",""], dismissal: "15:20" },
+    "水": { lessons: ["国語","算数","理科","社会","",""], dismissal: "14:30" },
+    "木": { lessons: ["算数","国語","図工","社会","総合",""], dismissal: "15:20" },
+    "金": { lessons: ["国語","算数","理科","学活","体育",""], dismissal: "15:20" },
+    "土": { lessons: ["","","","","",""], dismissal: "" },
+    "日": { lessons: ["","","","","",""], dismissal: "" }
 };
 
-function renderTimetableEditor(){
+// 行事・持ち物の月別データ
+let monthlyData = JSON.parse(localStorage.getItem("monthlyData")) || {};
 
-let html = `
-<tr>
-<th>曜日</th>
-<th>1校時</th>
-<th>2校時</th>
-<th>3校時</th>
-<th>4校時</th>
-<th>5校時</th>
-<th>6校時</th>
-</tr>
-`;
+// --- 描画関数 ---
 
-Object.keys(timetable).forEach(day=>{
-
-html += `<tr><td>${day}</td>`;
-
-for(let i=0;i<6;i++){
-
-html += `<td>
-<select id="${day}-${i}">
-`;
-
-subjects.forEach(subject=>{
-
-html += `
-<option
-value="${subject}"
-${timetable[day][i]===subject?"selected":""}
->
-${subject}
-</option>
-`;
-
-});
-
-html += `
-</select>
-</td>
-`;
-
+// 1. 曜日別設定テーブル
+function renderWeeklyEditor(){
+    let html = `<tr><th>曜日</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>下校</th></tr>`;
+    ["月","火","水","木","金","土"].forEach(day => {
+        html += `<tr><td>${day}</td>`;
+        for(let i=0; i<6; i++){
+            html += `<td><select id="t-${day}-${i}" style="width:60px;">`;
+            subjects.forEach(s => {
+                html += `<option value="${s}" ${weeklyConfig[day].lessons[i]===s?"selected":""}>${s}</option>`;
+            });
+            html += `</select></td>`;
+        }
+        html += `<td><input id="d-${day}" value="${weeklyConfig[day].dismissal}" style="width:50px;"></td></tr>`;
+    });
+    document.getElementById("timetableEditor").innerHTML = html;
 }
 
-html += "</tr>";
-
-});
-
-document.getElementById("timetableEditor").innerHTML =
-html;
-
+// 2. 曜日設定の保存
+function saveWeeklyConfig(){
+    ["月","火","水","木","金","土","日"].forEach(day => {
+        if(day !== "日"){
+            for(let i=0; i<6; i++){
+                weeklyConfig[day].lessons[i] = document.getElementById(`t-${day}-${i}`).value;
+            }
+            weeklyConfig[day].dismissal = document.getElementById(`d-${day}`).value;
+        }
+    });
+    localStorage.setItem("weeklyConfig", JSON.stringify(weeklyConfig));
+    alert("曜日設定を保存しました");
+    createTable();
 }
 
-function saveTimetable(){
-
-Object.keys(timetable).forEach(day=>{
-
-for(let i=0;i<6;i++){
-
-timetable[day][i] =
-document.getElementById(`${day}-${i}`).value;
-
-}
-
-});
-
-localStorage.setItem(
-"timetable",
-JSON.stringify(timetable)
-);
-
-alert("時間割を保存しました");
-
-createTable();
-
-}
-
+// 3. 学習予定表の生成
 function createTable(){
+    const year = Number(document.getElementById("year").value);
+    const month = Number(document.getElementById("month").value);
+    const grade = document.getElementById("grade").value;
+    const teacher = document.getElementById("teacher").value;
+    const lastDay = new Date(year, month, 0).getDate();
+    const monthKey = `${year}-${month}`;
 
-const year =
-Number(document.getElementById("year").value);
+    document.getElementById("tableTitle").innerText = `${year}年度 ${month}月 学習予定表`;
+    document.getElementById("displayTarget").innerText = `${grade}年生`;
+    document.getElementById("displayTeacher").innerText = `担任：${teacher}`;
 
-const month =
-Number(document.getElementById("month").value);
+    // 月別データの読み込み
+    const currentMonthEvents = monthlyData[monthKey]?.events || {};
+    document.getElementById("belongingsArea").value = monthlyData[monthKey]?.belongings || "";
 
-const lastDay =
-new Date(year,month,0).getDate();
+    let html = `<table><tr><th>日</th><th>曜</th><th>行事など</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>下校</th></tr>`;
+    const count = {};
 
-const weekNames =
-["日","月","火","水","木","金","土"];
+    for(let d=1; d<=lastDay; d++){
+        const date = new Date(year, month-1, d);
+        const week = weekNames[date.getDay()];
+        const config = weeklyConfig[week];
+        const eventVal = currentMonthEvents[d] || "";
 
-let html = `
-<table>
-<tr>
-<th>日</th>
-<th>曜</th>
-<th>学校行事など</th>
-<th>1</th>
-<th>2</th>
-<th>3</th>
-<th>4</th>
-<th>5</th>
-<th>6</th>
-<th>下校</th>
-</tr>
-`;
+        html += `<tr>
+            <td>${d}</td>
+            <td class="${week==='日'?'sun':(week==='土'?'sat':'')}">${week}</td>
+            <td><input class="input-cell" id="ev-${d}" value="${eventVal}" onchange="saveMonthlyData()"></td>`;
+        
+        for(let i=0; i<6; i++){
+            const subj = config.lessons[i];
+            html += `<td class="lesson-cell">${subj}</td>`;
+            if(subj) count[subj] = (count[subj]||0) + 1;
+        }
 
-const count = {};
+        html += `<td>${config.dismissal}</td></tr>`;
+    }
+    html += "</table>";
+    document.getElementById("tableArea").innerHTML = html;
 
-for(let day=1;day<=lastDay;day++){
-
-const date =
-new Date(year,month-1,day);
-
-const week =
-weekNames[date.getDay()];
-
-const lessons =
-timetable[week] ||
-["","","","","",""];
-
-lessons.forEach(subject=>{
-
-if(subject){
-
-count[subject] =
-(count[subject]||0)+1;
-
+    renderHours(count);
 }
 
-});
-
-let dismissal = "";
-
-if(week==="水"){
-dismissal="14:30";
-}else if(
-week==="月" ||
-week==="火" ||
-week==="木" ||
-week==="金"
-){
-dismissal="15:20";
+// 4. 時数集計
+function renderHours(count){
+    let html = `<table><tr><th>教科</th><th>時数</th></tr>`;
+    Object.keys(count).forEach(s => {
+        html += `<tr><td>${s}</td><td>${count[s]}</td></tr>`;
+    });
+    html += "</table>";
+    document.getElementById("hoursArea").innerHTML = html;
 }
 
-html += `
-<tr>
-<td>${day}</td>
-<td>${week}</td>
-<td><input class="event"></td>
-<td>${lessons[0]}</td>
-<td>${lessons[1]}</td>
-<td>${lessons[2]}</td>
-<td>${lessons[3]}</td>
-<td>${lessons[4]}</td>
-<td>${lessons[5]}</td>
-<td>${dismissal}</td>
-</tr>
-`;
+// 5. 月別データの保存（行事・持ち物）
+function saveMonthlyData(){
+    const year = document.getElementById("year").value;
+    const month = document.getElementById("month").value;
+    const lastDay = new Date(year, month, 0).getDate();
+    const monthKey = `${year}-${month}`;
 
+    const events = {};
+    for(let d=1; d<=lastDay; d++){
+        const val = document.getElementById(`ev-${d}`).value;
+        if(val) events[d] = val;
+    }
+
+    monthlyData[monthKey] = {
+        events: events,
+        belongings: document.getElementById("belongingsArea").value
+    };
+
+    localStorage.setItem("monthlyData", JSON.stringify(monthlyData));
 }
 
-html += "</table>";
-
-document.getElementById("tableArea").innerHTML =
-html;
-
-let hours = `
-<table>
-<tr>
-<th>教科</th>
-<th>時数</th>
-</tr>
-`;
-
-Object.keys(count).forEach(subject=>{
-
-hours += `
-<tr>
-<td>${subject}</td>
-<td>${count[subject]}</td>
-</tr>
-`;
-
-});
-
-hours += "</table>";
-
-document.getElementById("hoursArea").innerHTML =
-hours;
-
+function updateAll(){
+    createTable();
 }
 
-renderTimetableEditor();
+// 初期化
+renderWeeklyEditor();
 createTable();
 
 </script>
