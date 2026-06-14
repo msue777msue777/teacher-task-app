@@ -160,17 +160,17 @@ function renderAll() {
     document.getElementById("tableTitle").innerText = `${y}年度 ${m}月 学習予定表`;
     document.getElementById("belongings").value = state.plan.belongings || "";
 
-    // 時間割エディタ
-    let edHtml = `<table><tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>`;
-    ["月","火","水","木","金"].forEach(day => {
-        edHtml += `<tr><th>${day}</th>`;
-        for(let i=0; i<6; i++) {
+    // 時間割エディタ（ここを縦軸：校時、横軸：曜日に変更）
+    let edHtml = `<table><tr><th>校時</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th></tr>`;
+    for(let i=0; i<6; i++) {
+        edHtml += `<tr><th>${i+1}</th>`;
+        ["月","火","水","木","金"].forEach(day => {
             const s = state.weeklyConfig[day][i];
             edHtml += `<td style="background:${subColors[s]||'#fff'}"><select onchange="state.weeklyConfig['${day}'][${i}]=this.value;renderAll();" style="width:100%; border:none; background:transparent;">`;
             edHtml += `<option value=""></option>${subjects.map(sub=>`<option value="${sub}" ${s===sub?'selected':''}>${sub}</option>`).join('')}</select></td>`;
-        }
+        });
         edHtml += `</tr>`;
-    });
+    }
     document.getElementById("editorArea").innerHTML = edHtml + `</table>`;
 
     // 本表
