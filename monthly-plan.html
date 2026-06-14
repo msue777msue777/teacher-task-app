@@ -11,38 +11,42 @@
 
     <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden">
         <!-- ヘッダー -->
-        <div class="bg-emerald-700 p-4 flex justify-between items-center text-white">
+        <div class="bg-emerald-700 p-4 flex flex-col md:flex-row justify-between items-center text-white gap-4">
             <div>
                 <h1 class="text-xl font-bold">5月 週案・時数管理</h1>
                 <p id="save-status" class="text-[10px] opacity-80">接続済み</p>
             </div>
-            <a href="index.html" class="bg-emerald-600 px-4 py-2 rounded shadow-sm text-sm hover:bg-emerald-500">戻る</a>
+            
+            <!-- 週切り替えボタン -->
+            <div class="flex items-center bg-emerald-800 rounded-lg p-1">
+                <button onclick="changeWeek(-7)" class="px-3 py-1 hover:bg-emerald-600 rounded">◀ 前の週</button>
+                <span id="current-week-label" class="px-4 text-sm font-bold border-x border-emerald-600">5月11日週</span>
+                <button onclick="changeWeek(7)" class="px-3 py-1 hover:bg-emerald-600 rounded">次の週 ▶</button>
+            </div>
+
+            <a href="index.html" class="bg-emerald-600 px-4 py-2 rounded shadow-sm text-sm hover:bg-emerald-500 text-center w-full md:w-auto">戻る</a>
         </div>
 
         <!-- 週案テーブル -->
         <div class="overflow-x-auto p-2">
             <table class="w-full border-collapse border border-gray-300">
                 <thead>
-                    <tr class="bg-gray-100 text-xs text-gray-600">
+                    <tr id="table-header" class="bg-gray-100 text-[10px] md:text-xs text-gray-600">
                         <th class="border border-gray-300 p-2 w-12">校時</th>
-                        <th class="border border-gray-300 p-2">月曜日</th>
-                        <th class="border border-gray-300 p-2">火曜日</th>
-                        <th class="border border-gray-300 p-2">水曜日</th>
-                        <th class="border border-gray-300 p-2">木曜日</th>
-                        <th class="border border-gray-300 p-2">金曜日</th>
+                        <!-- JSで日付が入ります -->
                     </tr>
                 </thead>
                 <tbody id="schedule-body">
-                    <!-- JavaScriptで動的に生成 -->
+                    <!-- JSで動的に生成 -->
                 </tbody>
             </table>
         </div>
 
-        <!-- 時数集計（ダッシュボード風） -->
+        <!-- 時数集計 -->
         <div class="bg-slate-100 p-4 md:p-6 border-t border-slate-200">
             <h2 class="text-sm font-bold mb-4 text-slate-600 flex items-center">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                5月の実施時数状況
+                5月の実施時数状況（月間累計）
             </h2>
             <div id="summary-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <!-- JSで動的に生成 -->
@@ -55,30 +59,64 @@
         const SUPABASE_KEY = 'sb_publishable_pexunuSRbbG_3GgfTUovTA_i7iwAHG0';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 5月の表示週
-        const days = ["2026-05-11", "2026-05-12", "2026-05-13", "2026-05-14", "2026-05-15"];
+        // 表示の基準となる月曜日
+        let currentMonday = new Date('2026-05-11'); 
         const periods = [1, 2, 3, 4, 5, 6];
         let subjects = [];
 
         async function init() {
             try {
-                // 教科と現在までの全データを取得
-                const [{ data: subData }, { data: schData }, { data: plans }] = await Promise.all([
+                const [{ data: subData }, { data: plans }] = await Promise.all([
                     _supabase.from('subjects').select('*').order('display_order'),
-                    _supabase.from('schedules').select('*'),
                     _supabase.from('yearly_plans').select('*').eq('month', 5)
                 ]);
-
                 subjects = subData || [];
-                renderTable(schData || []);
-                renderSummary(schData || [], plans || []);
-                document.getElementById('save-status').innerText = '通信状況：良好';
+                window.plans = plans || []; // 計画をグローバルに保存
+                await refreshData();
             } catch (e) {
-                document.getElementById('save-status').innerText = 'エラー：再読み込みしてください';
+                document.getElementById('save-status').innerText = '接続エラー';
             }
         }
 
-        function renderTable(savedData) {
+        // 週を切り替える関数
+        async function changeWeek(daysOffset) {
+            currentMonday.setDate(currentMonday.getDate() + daysOffset);
+            await refreshData();
+        }
+
+        // データを再読み込みして画面を更新
+        async function refreshData() {
+            const statusEl = document.getElementById('save-status');
+            statusEl.innerText = '読み込み中...';
+            
+            const { data: schData } = await _supabase.from('schedules').select('*');
+            
+            const weekDays = [];
+            for(let i=0; i<5; i++) {
+                const d = new Date(currentMonday);
+                d.setDate(d.getDate() + i);
+                weekDays.push(d.toISOString().split('T')[0]);
+            }
+
+            renderTableHeader(weekDays);
+            renderTable(weekDays, schData || []);
+            renderSummary(schData || [], window.plans);
+            
+            const label = `${currentMonday.getMonth()+1}月${currentMonday.getDate()}日週`;
+            document.getElementById('current-week-label').innerText = label;
+            statusEl.innerText = '接続済み';
+        }
+
+        function renderTableHeader(weekDays) {
+            const header = document.getElementById('table-header');
+            const dayNames = ["月", "火", "水", "木", "金"];
+            header.innerHTML = '<th class="border border-gray-300 p-2 w-12">校時</th>';
+            weekDays.forEach((date, i) => {
+                header.innerHTML += `<th class="border border-gray-300 p-2">${date.split('-')[2]}日(${dayNames[i]})</th>`;
+            });
+        }
+
+        function renderTable(weekDays, savedData) {
             const body = document.getElementById('schedule-body');
             body.innerHTML = '';
 
@@ -86,7 +124,7 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `<td class="border border-gray-300 p-2 bg-gray-50 text-center font-bold text-gray-400 text-xs">${p}</td>`;
                 
-                days.forEach(dateStr => {
+                weekDays.forEach(dateStr => {
                     const cellData = savedData.find(d => d.date === dateStr && d.period === p);
                     const td = document.createElement('td');
                     td.className = "border border-gray-300 p-1 h-28 align-top hover:bg-emerald-50 transition-colors";
@@ -94,11 +132,11 @@
                     const options = subjects.map(s => `<option value="${s.id}" ${cellData?.subject_id === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
                     
                     td.innerHTML = `
-                        <select onchange="save('${dateStr}', ${p}, this.value)" class="w-full text-xs font-bold bg-transparent mb-1 outline-none appearance-none cursor-pointer text-emerald-800">
+                        <select onchange="save('${dateStr}', ${p}, this.value)" class="w-full text-[10px] md:text-xs font-bold bg-transparent mb-1 outline-none appearance-none cursor-pointer text-emerald-800">
                             <option value="">-- 教科 --</option>
                             ${options}
                         </select>
-                        <textarea onblur="updateMemo('${dateStr}', ${p}, this.value)" class="w-full text-[10px] leading-tight h-16 bg-transparent border-none resize-none outline-none focus:bg-white p-1 rounded" placeholder="内容・単元...">${cellData?.memo || ''}</textarea>
+                        <textarea onblur="updateMemo('${dateStr}', ${p}, this.value)" class="w-full text-[10px] leading-tight h-16 bg-transparent border-none resize-none outline-none focus:bg-white p-1 rounded font-sans" placeholder="内容...">${cellData?.memo || ''}</textarea>
                     `;
                     tr.appendChild(td);
                 });
@@ -107,17 +145,13 @@
         }
 
         async function save(date, period, subjectId) {
-            const statusEl = document.getElementById('save-status');
-            statusEl.innerText = '保存中...';
-            
+            document.getElementById('save-status').innerText = '保存中...';
             await _supabase.from('schedules').upsert({
                 date: date,
                 period: period,
                 subject_id: subjectId ? parseInt(subjectId) : null
             }, { onConflict: 'date,period' });
-
-            statusEl.innerText = '保存完了';
-            refreshSummary();
+            await refreshData();
         }
 
         async function updateMemo(date, period, memo) {
@@ -128,33 +162,25 @@
             }, { onConflict: 'date,period' });
         }
 
-        async function renderSummary(schData, plans) {
+        function renderSummary(schData, plans) {
             const container = document.getElementById('summary-grid');
             container.innerHTML = '';
-
             subjects.forEach(s => {
-                // この教科の累計実施時数を計算
                 const actual = schData.filter(d => d.subject_id === s.id).length;
                 const plan = plans.find(p => p.subject_id === s.id)?.planned_hours || 0;
                 const percent = Math.min((actual / (plan || 1)) * 100, 100);
                 
                 const card = document.createElement('div');
-                card.className = "bg-white border border-slate-200 p-3 rounded-lg shadow-sm";
+                card.className = "bg-white border border-slate-200 p-2 rounded shadow-sm";
                 card.innerHTML = `
                     <div class="text-[10px] text-slate-400 font-bold mb-1">${s.name}</div>
-                    <div class="text-lg font-black text-slate-700">${actual} <span class="text-xs font-normal text-slate-400">/ ${plan}</span></div>
-                    <div class="w-full bg-slate-100 h-1.5 mt-2 rounded-full overflow-hidden">
+                    <div class="text-sm font-black text-slate-700">${actual} <span class="text-[10px] font-normal text-slate-400">/ ${plan}</span></div>
+                    <div class="w-full bg-slate-100 h-1 mt-1 rounded-full overflow-hidden">
                         <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${percent}%"></div>
                     </div>
                 `;
                 container.appendChild(card);
             });
-        }
-
-        async function refreshSummary() {
-            const { data: schData } = await _supabase.from('schedules').select('*');
-            const { data: plans } = await _supabase.from('yearly_plans').select('*').eq('month', 5);
-            renderSummary(schData || [], plans || []);
         }
 
         init();
