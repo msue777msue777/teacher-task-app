@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>所見作成・カスタマイズ版（CROWN Jr.対応）</title>
     <style>
-        body { font-family: -apple-system, sans-serif; padding: 15px; background-color: #f0f2f5; color: #333; }
+        body { font-family: -apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif; padding: 15px; background-color: #f0f2f5; color: #333; }
         .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .back-btn { display: inline-block; margin-bottom: 15px; color: #1a73e8; text-decoration: none; font-size: 0.85rem; font-weight: bold; }
         .back-btn:hover { text-decoration: underline; }
@@ -47,7 +47,7 @@
             <option value="算数">算数（東書）</option>
             <option value="社会">社会（東書）</option>
             <option value="理科">理科（東書）</option>
-            <option value="外国語">外国語（CROWN Jr.）</option>
+            <option value="外国語" selected>外国語（CROWN Jr.）</option>
             <option value="道徳">道徳（東書）</option>
             <option value="生活面">生活・行動</option>
             <option value="行事">学校行事</option>
@@ -119,9 +119,13 @@ const defaultData = [
     { g: "5", s: "国語", u: "大造じいさんとガン", goal: "情景描写が人物の心情に与える影響や、優れた表現を味わい物語の魅力をまとめる能力" },
 
     // 5年生 外国語（CROWN Jr. 5 対応）
-    { g: "5", s: "外国語", u: "Unit 1 自己紹介をしよう", goal: "名前や誕生日、好きな教科や日常の習慣について、相手に伝わるよう英語で自己紹介する能力" },
-    { g: "5", s: "外国語", u: "Unit 2 あこがれの人を紹介しよう", goal: "家族や友人、憧れの人について、性格やできること、得意なことを含めて英語で紹介し合う能力" },
-    { g: "5", s: "外国語", u: "Unit 3 おすすめの場所を紹介しよう", goal: "身近な場所や世界の名所について、位置やそこでできることを英語で伝え合い、魅力を共有する能力" },
+    { g: "5", s: "外国語", u: "L1 My name is Jun.", goal: "名前や誕生日などの基本的な情報を相手に分かるように伝え合い、自分についてまとめて自己紹介する能力" },
+    { g: "5", s: "外国語", u: "L2 I play soccer on Tuesdays.", goal: "好きな教科や曜日と結びつけた日常の習慣を伝え合い、自分ががんばっていることを説明する能力" },
+    { g: "5", s: "外国語", u: "L3 He is my brother.", goal: "身近な人の名前や関係、性格・特徴を説明して紹介し、その内容を簡単に書く能力" },
+    { g: "5", s: "外国語", u: "L4 I can jump high.", goal: "自分や友だちが「できること／できないこと」を尋ね合い、詳しく知るためのやり取りをする能力" },
+    { g: "5", s: "外国語", u: "L5 She can bake cookies.", goal: "様々な人の職業や得意なことを説明し、人物紹介クイズを通して情報を伝え合う能力" },
+    { g: "5", s: "外国語", u: "L6 It is in Fukui.", goal: "場所の所在地や地域の名所、そこでできることを説明し、おすすめをクイズ形式で紹介する能力" },
+    { g: "5", s: "外国語", u: "L7 I want to go to Kenya.", goal: "行きたい国やそこで見たいもの、したいことを説明し、それらについて英語で書く能力" },
 
     // 6年生 国語
     { g: "6", s: "国語", u: "帰り道", goal: "二人の登場人物それぞれの視点から、人物像や心情の変化を多角的に捉える能力" },
@@ -129,9 +133,13 @@ const defaultData = [
     { g: "6", s: "国語", u: "海の命", goal: "物語全体の伏線や叙述をもとに、人物の生き方や選択について深く読み解く能力" },
 
     // 6年生 外国語（CROWN Jr. 6 対応）
-    { g: "6", s: "外国語", u: "Unit 1 地域のことを伝えよう", goal: "自分たちの町や地域の施設、日本の行事や自然の魅力について、相手に伝わるよう英語で紹介し合う能力" },
-    { g: "6", s: "外国語", u: "Unit 2 思い出を伝えよう", goal: "夏休みや小学校生活の思い出について、出来事と当時の気持ちを結びつけて英語で詳しく伝え合う能力" },
-    { g: "6", s: "外国語", u: "Unit 3 将来の夢を伝えよう", goal: "将来なりたい職業や中学校で取り組みたいことについて、理由や自分の得意なことと結びつけて英語で発表する能力" },
+    { g: "6", s: "外国語", u: "L1 We are from India.", goal: "友だちとの共通点を見つけて伝え合い、それらを整理して他の人に紹介する能力" },
+    { g: "6", s: "外国語", u: "L2 We have Children’s Day in May.", goal: "日本の行事や地域の魅力を時期や内容と結びつけて紹介し、その魅力を英語で書く能力" },
+    { g: "6", s: "外国語", u: "L3 I went to the beach.", goal: "夏休みに行った場所やしたこと、楽しんだことを整理して、どのように過ごしたかを説明する能力" },
+    { g: "6", s: "外国語", u: "L4 It was green.", goal: "現在と過去を比較して、ものの状態の変化を伝え合い、小学校生活の移り変わりについて書く能力" },
+    { g: "6", s: "外国語", u: "L5 We had the sports day in October.", goal: "思い出の学校行事について、何をしたかやその時の心情を整理して話したり書いたりする能力" },
+    { g: "6", s: "外国語", u: "L6 I want to be a singer.", goal: "将来の夢や理由、したいことを説明し、友だちの夢を聞いて応援し合うやり取りをする能力" },
+    { g: "6", s: "外国語", u: "L7 I want to join the brass band.", goal: "中学校で力を入れたい教科や部活動、送りたい学校生活について伝え合い、話し合う能力" },
 
     // 共通・その他
     { g: "all", s: "生活面", u: "責任感", goal: "自分の役割を自覚し最後までやり遂げる態度" },
