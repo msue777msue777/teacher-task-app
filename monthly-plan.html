@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>月案・週案メーカー Pro - 印刷分離版</title>
+    <title>月案・週案メーカー Pro - 印刷最適化済</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* --- 基本デザイン --- */
         :root { --primary: #2563eb; --bg: #f8fafc; --accent: #8b5cf6; --success: #10b981; }
         body { font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif; background: var(--bg); margin: 0; color: #1e293b; padding-bottom: 50px; }
         header { background: var(--primary); color: white; padding: 1rem; text-align: center; }
@@ -27,37 +28,47 @@
         th, td { border: 1px solid #e2e8f0; padding: 6px; text-align: center; }
         th { background: #f1f5f9; }
         .sat { background: #eff6ff; color: #1d4ed8; } .sun { background: #fef2f2; color: #dc2626; }
-        .event-input { width: 100%; border: 1px solid #eee; text-align: left; padding: 2px; }
+        .event-input { width: 100%; border: 1px solid #eee; text-align: left; padding: 2px; font-family: inherit; }
 
-        /* --- 印刷共通設定 --- */
+        /* --- 印刷設定 (URLを消す魔法) --- */
         .no-print { display: block; }
         .print-only { display: none; }
 
         @media print {
+            /* ページ余白を0にすることで、ブラウザのURL印字を消す */
+            @page { margin: 0; }
+            
+            /* 代わりにbodyに余白を作って中身が切れないようにする */
+            body { 
+                background: white; 
+                margin: 0; 
+                padding: 12mm; /* 紙の端からの余白 */
+                -webkit-print-color-adjust: exact;
+            }
+
             .no-print, header, .auth-bar, .card:not(.print-target) { display: none !important; }
-            body { background: white; padding: 0; }
             .container { max-width: 100%; padding: 0; margin: 0; }
             .card.print-target { box-shadow: none; padding: 0; margin: 0; display: block !important; width: 100%; border: none; }
+            
             table { border: 1.5pt solid black !important; width: 100% !important; }
-            th, td { border: 0.5pt solid black !important; padding: 2px !important; }
+            th, td { border: 0.5pt solid black !important; padding: 3px !important; }
             .event-input { border: none !important; background: transparent !important; }
         }
 
-        /* --- 月案(予定表) 印刷用 (A4縦) --- */
-        body.printing-monthly { }
+        /* 月案用 (縦向き) */
         @media print {
             body.printing-monthly #monthlyPrintSection { display: block !important; }
             body.printing-monthly #weeklyPrintSection { display: none !important; }
-            body.printing-monthly @page { size: A4 portrait; margin: 8mm; }
+            body.printing-monthly @page { size: A4 portrait; margin: 0; }
             body.printing-monthly table { font-size: 9.5pt; }
         }
 
-        /* --- 週案 印刷用 (A4横) --- */
+        /* 週案用 (横向き) */
         @media print {
             body.printing-weekly #monthlyPrintSection { display: none !important; }
             body.printing-weekly #weeklyPrintSection { display: block !important; }
-            body.printing-weekly @page { size: A4 landscape; margin: 8mm; }
-            body.printing-weekly table { font-size: 10pt; table-layout: auto; }
+            body.printing-weekly @page { size: A4 landscape; margin: 0; }
+            body.printing-weekly table { font-size: 11pt; table-layout: auto; }
         }
     </style>
 </head>
@@ -85,20 +96,19 @@
         </div>
     </div>
 
-    <!-- 印刷セクション -->
     <div class="card no-print">
-        <h2>② 印刷・出力</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px;">
-            <div style="border-right: 1px solid #eee; padding-right: 20px;">
-                <p style="font-size: 12px; color: #666;">児童配布用（A4縦）</p>
-                <button class="btn-print" onclick="printMonthly()" style="width: 100%;">学習予定表を印刷</button>
+        <h2>② 印刷（月案と週案は別々に印刷されます）</h2>
+        <div style="display: flex; gap: 20px;">
+            <div style="flex: 1; border-right: 1px solid #eee; padding-right: 20px;">
+                <p style="font-size: 12px; color: #666;">児童配布用（A4縦・1枚）</p>
+                <button class="btn-print" onclick="printMonthly()" style="width: 100%;">予定表（月案）を印刷</button>
             </div>
-            <div>
-                <p style="font-size: 12px; color: #666;">教務提出用（A4横）</p>
+            <div style="flex: 1.5;">
+                <p style="font-size: 12px; color: #666;">教務提出用（A4横・1枚）</p>
                 週を選択: <select id="weekSelector" onchange="renderWeeklyPlan()">
                     <option value="1">第1週</option><option value="2">第2週</option><option value="3">第3週</option><option value="4">第4週</option><option value="5">第5週</option>
                 </select>
-                <button class="btn-weekly" onclick="printWeekly()">週案を印刷</button>
+                <button class="btn-weekly" onclick="printWeekly()">選択した週案を印刷</button>
             </div>
         </div>
     </div>
@@ -114,25 +124,25 @@
         <button class="btn-primary" onclick="saveWeeklyConfig()" style="margin-top:10px;">時間割を保存</button>
     </div>
 
-    <!-- 印刷用：学習予定表 (月案) -->
+    <!-- 印刷用：月案（予定表） -->
     <div class="card print-target" id="monthlyPrintSection">
-        <h2 id="tableTitle" style="text-align:center; font-size: 22px; margin: 0;">学習予定表</h2>
-        <div style="display:flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; font-size: 14px;">
+        <h2 id="tableTitle" style="text-align:center; font-size: 20pt; margin: 0 0 10px 0;">学習予定表</h2>
+        <div style="display:flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; font-size: 11pt;">
             <div id="displayGrade">5年生</div>
             <div id="displayTeacher">担任：山田 太郎</div>
         </div>
         <div id="tableArea"></div>
-        <div style="margin-top:10px; border: 1pt solid black; padding: 8px;">
+        <div style="margin-top:10px; border: 1pt solid black; padding: 10px;">
             <strong>【今月の学習単元】</strong>
-            <div id="unitSummaryArea" style="font-size: 11px; margin-top: 3px;"></div>
+            <div id="unitSummaryArea" style="font-size: 10pt; margin-top: 5px;"></div>
             <div style="margin-top:10px;"><strong>【持ち物・連絡事項】</strong></div>
-            <textarea id="belongings" style="width:100%; height:80px; border:none; outline:none; font-family: inherit; font-size: 14px;" onchange="saveMonthlyData()"></textarea>
+            <textarea id="belongings" style="width:100%; height:80px; border:none; outline:none; font-family: inherit; font-size: 11pt; line-height:1.5;" onchange="saveMonthlyData()"></textarea>
         </div>
     </div>
 
     <!-- 印刷用：週案 -->
     <div id="weeklyPrintSection" class="card print-target print-only">
-        <h2 id="weeklyPrintTitle" style="text-align:center; margin: 0;">週指導計画</h2>
+        <h2 id="weeklyPrintTitle" style="text-align:center; margin: 0 0 10px 0; font-size: 18pt;">週指導計画</h2>
         <div id="weeklyPrintTableArea"></div>
     </div>
 
@@ -151,27 +161,25 @@ let weeklyConfig = { "月":["","","","","",""], "火":["","","","","",""], "水"
 let unitMaster = {};
 let allMonthlyPlans = [];
 
-// --- 印刷用関数 ---
+// --- 印刷機能 ---
 function printMonthly() {
-    document.getElementById("mainBody").classList.add("printing-monthly");
-    document.getElementById("mainBody").classList.remove("printing-weekly");
+    document.getElementById("mainBody").className = "printing-monthly";
     window.print();
 }
 
 function printWeekly() {
-    renderWeeklyPlan(); // 最新の状態に更新
-    document.getElementById("mainBody").classList.add("printing-weekly");
-    document.getElementById("mainBody").classList.remove("printing-monthly");
+    renderWeeklyPlan();
+    document.getElementById("mainBody").className = "printing-weekly";
     window.print();
 }
 
-// --- 認証 & データ処理 ---
+// --- 認証・データ処理 ---
 async function handleAuth() {
     const email = prompt("メールアドレス:");
     const password = prompt("パスワード:");
     if(!email || !password) return;
     const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-    if(error) { await _supabase.auth.signUp({ email, password }); alert("登録しました。再度ログインしてください。"); }
+    if(error) { await _supabase.auth.signUp({ email, password }); alert("登録しました。再ログインしてください。"); }
     else { location.reload(); }
 }
 
@@ -203,7 +211,6 @@ async function loadAllData() {
     } catch (e) { console.error(e); }
 }
 
-// --- 以下、以前のロジック維持 ---
 function renderSummary() {
     let html = `<table><tr><th>教科</th><th>今月</th><th>累計</th><th>単元進捗</th></tr>`;
     const ym = `${document.getElementById("year").value}-${document.getElementById("month").value}`;
@@ -279,13 +286,13 @@ function createTable() {
     document.getElementById("displayGrade").innerText = `${document.getElementById("grade").value}年生`;
     document.getElementById("displayTeacher").innerText = `担任：${document.getElementById("teacher").value}`;
     document.getElementById("belongings").value = plan.belongings || "";
-    let html = `<table><tr><th style="width:30px">日</th><th style="width:30px">曜</th><th>行事・予定</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>`;
+    let html = `<table><tr><th style="width:35px">日</th><th style="width:35px">曜</th><th>行事・予定</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>`;
     for(let d=1; d<=lastDay; d++) {
         const w = weeks[new Date(year, month-1, d).getDay()];
         const dayConfig = weeklyConfig[w] || ["","","","","",""];
         html += `<tr><td>${d}</td><td class="${w==='土'?'sat':(w==='日'?'sun':'')}">${w}</td>
             <td><input class="event-input" data-day="${d}" value="${plan.events ? plan.events[d]||'' : ''}" onchange="saveMonthlyData()"></td>
-            ${dayConfig.map(s => `<td style="width:55px">${s}</td>`).join('')}</tr>`;
+            ${dayConfig.map(s => `<td style="width:60px">${s}</td>`).join('')}</tr>`;
     }
     document.getElementById("tableArea").innerHTML = html + `</table>`;
     let unitSum = "";
