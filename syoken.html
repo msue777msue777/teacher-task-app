@@ -7,6 +7,7 @@
     <style>
         body { font-family: -apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif; padding: 15px; background-color: #f0f2f5; color: #333; }
         .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        /* リンク修正箇所のスタイル */
         .back-btn { display: inline-block; margin-bottom: 15px; color: #1a73e8; text-decoration: none; font-size: 0.85rem; font-weight: bold; }
         .back-btn:hover { text-decoration: underline; }
         h1 { font-size: 1rem; text-align: center; color: #1a73e8; margin-bottom: 20px; border-bottom: 2px solid #1a73e8; padding-bottom: 10px; margin-top: 0; }
@@ -25,12 +26,14 @@
         .copy-btn { background: #5f6368; margin-top: 10px; width: auto; padding: 8px 15px; color: white; border-radius: 5px; font-size: 0.75rem; }
         pre { white-space: pre-wrap; font-size: 0.85rem; background: #fff; padding: 10px; border-radius: 5px; border: 1px solid #ddd; }
         .small-text { font-size: 0.75rem; color: #888; text-align: center; margin-top: 20px; }
+        .sync-area { margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <a href="#" class="back-btn">← ポータルへ戻る</a>
+    <!-- 【修正1】リンク先を top.html に設定 -->
+    <a href="top.html" class="back-btn">← ポータルへ戻る</a>
     
     <h1>📝 所見作成プロンプト生成</h1>
     
@@ -104,6 +107,16 @@
             <button class="btn-green" onclick="saveNewUnit()">登録する</button>
             <button class="btn-blue" style="background:#888" onclick="toggleAdmin()">戻る</button>
         </div>
+
+        <!-- 【修正2】端末間データ移行機能を追加 -->
+        <div class="sync-area">
+            <p style="font-size:0.8rem; margin-bottom:5px; font-weight:bold;">別の端末へデータを移す：</p>
+            <div class="btn-group" style="margin-top:5px;">
+                <button class="btn-blue" style="background:#6c757d; font-size:0.75rem; padding:10px;" onclick="exportData()">データを書き出す</button>
+                <button class="btn-blue" style="background:#6c757d; font-size:0.75rem; padding:10px;" onclick="importData()">データを読み込む</button>
+            </div>
+            <p style="font-size:0.65rem; color:#777; margin-top:5px;">※追加した教科・単元を別のスマホやPCへコピーできます。</p>
+        </div>
     </div>
 
     <p class="small-text">追加したデータはブラウザに保存されます</p>
@@ -112,7 +125,6 @@
 <script>
 // 初期データ
 const defaultData = [
-    // 生活・行動（行動の記録：PDF資料 第5学年及び第6学年より抜粋）
     { g: "all", s: "生活面", u: "基本的な生活習慣", goal: "自他の安全に努め、礼儀正しく行動し、節度を守り節制に心掛ける態度" },
     { g: "all", s: "生活面", u: "健康・体力の向上", goal: "心身の健康の保持増進と体力の向上に努め、元気に生活する態度" },
     { g: "all", s: "生活面", u: "自主・自律", goal: "夢や希望をもってより高い目標を立て、当面の課題に根気強く取り組み、努力する態度" },
@@ -123,8 +135,6 @@ const defaultData = [
     { g: "all", s: "生活面", u: "勤労・奉仕", goal: "働くことの意義を理解し、人や社会の役に立つことを考え、進んで仕事や奉仕活動をする態度" },
     { g: "all", s: "生活面", u: "公正・公平", goal: "だれに対しても差別をすることや偏見をもつことなく、正義を大切にし、公正・公平に行動する態度" },
     { g: "all", s: "生活面", u: "公共心・公徳心", goal: "規則を尊重し、公徳を大切にするとともに、郷土や我が国の文化や伝統を大切にし、学校や人々の役に立つことを進んで行う態度" },
-
-    // 5年生 国語 (光村 令和6年度版)
     { g: "5", s: "国語", u: "なまえつけてよ", goal: "登場人物同士の関わり方や心情の変化を捉えて読み、感想を交流する能力" },
     { g: "5", s: "国語", u: "言葉で伝え合おう（見立てる）", goal: "事例と主張の関係を整理し、筆者の説明の仕方の工夫を捉える能力" },
     { g: "5", s: "国語", u: "みんなが過ごしやすい町へ", goal: "調べたことを事実と感想に区別して整理し、目的に応じた構成で報告文を書く能力" },
@@ -140,8 +150,6 @@ const defaultData = [
     { g: "5", s: "国語", u: "伝記を読み、自分の生き方を考えよう", goal: "人物の生き方や言葉から、自分の将来や生き方について考えを深める能力" },
     { g: "5", s: "国語", u: "わらぐつの中の神様", goal: "物語の構成や人物の生き方を捉えて読み、自分の考えをまとめる能力" },
     { g: "5", s: "国語", u: "言葉のまとめ・提案しよう", goal: "5年生で学んだ漢字や語彙、敬語などを総括し、相手や目的に応じて活用する能力" },
-
-    // 5年生 外国語（CROWN Jr. 5）
     { g: "5", s: "外国語", u: "L1 My name is Jun.", goal: "名前や誕生日などの基本的な情報を相手に分かるように伝え合い、自分についてまとめて自己紹介する能力" },
     { g: "5", s: "外国語", u: "L2 I play soccer on Tuesdays.", goal: "好きな教科や曜日と結びつけた日常の習慣を伝え合い、自分ががんばっていることを説明する能力" },
     { g: "5", s: "外国語", u: "L3 He is my brother.", goal: "身近な人の名前や関係、性格・特徴を説明して紹介し、その内容を簡単に書く能力" },
@@ -149,8 +157,6 @@ const defaultData = [
     { g: "5", s: "外国語", u: "L5 She can bake cookies.", goal: "様々な人の職業や得意なことを説明し、人物紹介クイズを通して情報を伝え合う能力" },
     { g: "5", s: "外国語", u: "L6 It is in Fukui.", goal: "場所の所在地や地域の名所、そこでできることを説明し、おすすめをクイズ形式で紹介する能力" },
     { g: "5", s: "外国語", u: "L7 I want to go to Kenya.", goal: "行きたい国やそこで見たいもの、したいことを説明し、それらについて英語で書く能力" },
-
-    // 6年生 国語 (光村 令和6年度版)
     { g: "6", s: "国語", u: "つなぐ言葉・春のいぶき", goal: "言葉の響きやリズム、言葉が持つ役割を意識し、学習の見通しを立てる能力" },
     { g: "6", s: "国語", u: "帰り道", goal: "二人の登場人物それぞれの視点から物語を読み比べ、心情の変化を多角的に捉える能力" },
     { g: "6", s: "国語", u: "時計の時間と心の時間", goal: "筆者の主張と事例の関係を整理し、論理の展開が適切かどうかを評価して読む能力" },
@@ -163,8 +169,6 @@ const defaultData = [
     { g: "6", s: "国語", u: "海の命", goal: "物語全体の伏線や叙述をもとに、人物の生き方や選択について深く読み解き議論する能力" },
     { g: "6", s: "国語", u: "今、あなたに伝えたいこと", goal: "6年間の学習を振り返り、今の思いや将来への決意を、構成を工夫してスピーチする能力" },
     { g: "6", s: "国語", u: "座右の銘を紹介しよう", goal: "自分の支えとなる言葉を見つけ、理由とともにこれからの生かし方を文章にまとめる能力" },
-
-    // 6年生 外国語（CROWN Jr. 6）
     { g: "6", s: "外国語", u: "L1 We are from India.", goal: "友だちとの共通点を見つけて伝え合い、それらを整理して他の人に紹介する能力" },
     { g: "6", s: "外国語", u: "L2 We have Children’s Day in May.", goal: "日本の行事や地域の魅力を時期や内容と結びつけて紹介し、その魅力を英語で書く能力" },
     { g: "6", s: "外国語", u: "L3 I went to the beach.", goal: "夏休みに行った場所やしたこと、楽しんだことを整理して、どのように過ごしたかを説明する能力" },
@@ -172,8 +176,6 @@ const defaultData = [
     { g: "6", s: "外国語", u: "L5 We had the sports day in October.", goal: "思い出の学校行事について、何をしたかやその時の心情を整理して話したり書いたりする能力" },
     { g: "6", s: "外国語", u: "L6 I want to be a singer.", goal: "将来の夢や理由、したいことを説明し、友だちの夢を聞いて応援し合うやり取りをする能力" },
     { g: "6", s: "外国語", u: "L7 I want to join the brass band.", goal: "中学校で力を入れたい教科や部活動、送りたい学校生活について伝え合い、話し合う能力" },
-
-    // 共通
     { g: "all", s: "行事", u: "運動会", goal: "目標に向かって協力し、粘り強く取り組む態度" },
     { g: "all", s: "行事", u: "校外学習", goal: "公共の場のルールを守り、集団で協力して見学する態度" }
 ];
@@ -284,6 +286,36 @@ function copyText(id) {
     const text = document.getElementById(id).innerText;
     navigator.clipboard.writeText(text);
     alert("コピーしました。");
+}
+
+/* --- 追加機能：データ同期用のJS --- */
+
+// 1. 書き出し
+function exportData() {
+    const data = localStorage.getItem('myCustomUnits');
+    if (!data || data === "[]") {
+        alert("保存されている追加単元データはありません。");
+        return;
+    }
+    // クリップボードにコピー
+    navigator.clipboard.writeText(data).then(() => {
+        alert("現在のデータをコピーしました。\n別の端末で「読み込む」ボタンを押し、この内容を貼り付けてください。");
+    });
+}
+
+// 2. 読み込み
+function importData() {
+    const json = prompt("コピーしたデータをここに貼り付けてください（現在の追加データは上書きされます）:");
+    if (json) {
+        try {
+            JSON.parse(json); // 正しいJSON形式か検証
+            localStorage.setItem('myCustomUnits', json);
+            alert("読み込みに成功しました。ページを更新して反映します。");
+            location.reload();
+        } catch (e) {
+            alert("エラー：データの形式が正しくありません。正しくコピーされたものを貼り付けてください。");
+        }
+    }
 }
 
 window.onload = updateUnits;
