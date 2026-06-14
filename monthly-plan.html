@@ -21,7 +21,7 @@ header{
 }
 
 .container{
-    max-width:1200px;
+    max-width:1400px;
     margin:auto;
     padding:20px;
 }
@@ -34,8 +34,12 @@ header{
     box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
 
+h2{
+    margin-top:0;
+}
+
 input,select{
-    padding:6px;
+    padding:5px;
     margin:3px;
 }
 
@@ -46,6 +50,10 @@ button{
     padding:10px 15px;
     border-radius:8px;
     cursor:pointer;
+}
+
+button:hover{
+    opacity:0.9;
 }
 
 table{
@@ -64,12 +72,14 @@ th,td{
     width:150px;
 }
 
+.lesson-input{
+    width:80px;
+}
+
 .back{
-    display:inline-block;
-    margin-bottom:10px;
     text-decoration:none;
-    color:#2563eb;
     font-weight:bold;
+    color:#2563eb;
 }
 
 </style>
@@ -113,6 +123,20 @@ th,td{
 
 <div class="card">
 
+<h2>固定時間割</h2>
+
+<table id="timetableEditor"></table>
+
+<br>
+
+<button onclick="saveTimetable()">
+時間割を保存
+</button>
+
+</div>
+
+<div class="card">
+
 <h2>児童配布用 学習予定表</h2>
 
 <div id="tableArea"></div>
@@ -131,13 +155,107 @@ th,td{
 
 <script>
 
-const timetable = {
+const subjects = [
+"",
+"国語",
+"算数",
+"理科",
+"社会",
+"体育",
+"音楽",
+"図工",
+"家庭",
+"外国語",
+"総合",
+"学活",
+"道徳"
+];
+
+let timetable =
+JSON.parse(localStorage.getItem("timetable")) || {
 "月":["国語","算数","理科","社会","体育",""],
 "火":["算数","国語","音楽","体育","総合",""],
 "水":["国語","算数","理科","社会","",""],
 "木":["算数","国語","図工","社会","総合",""],
 "金":["国語","算数","理科","学活","体育",""]
 };
+
+function renderTimetableEditor(){
+
+let html = `
+<tr>
+<th>曜日</th>
+<th>1校時</th>
+<th>2校時</th>
+<th>3校時</th>
+<th>4校時</th>
+<th>5校時</th>
+<th>6校時</th>
+</tr>
+`;
+
+Object.keys(timetable).forEach(day=>{
+
+html += `<tr><td>${day}</td>`;
+
+for(let i=0;i<6;i++){
+
+html += `<td>
+<select id="${day}-${i}">
+`;
+
+subjects.forEach(subject=>{
+
+html += `
+<option
+value="${subject}"
+${timetable[day][i]===subject?"selected":""}
+>
+${subject}
+</option>
+`;
+
+});
+
+html += `
+</select>
+</td>
+`;
+
+}
+
+html += "</tr>";
+
+});
+
+document.getElementById("timetableEditor").innerHTML =
+html;
+
+}
+
+function saveTimetable(){
+
+Object.keys(timetable).forEach(day=>{
+
+for(let i=0;i<6;i++){
+
+timetable[day][i] =
+document.getElementById(`${day}-${i}`).value;
+
+}
+
+});
+
+localStorage.setItem(
+"timetable",
+JSON.stringify(timetable)
+);
+
+alert("時間割を保存しました");
+
+createTable();
+
+}
 
 function createTable(){
 
@@ -165,12 +283,13 @@ let html = `
 <th>4</th>
 <th>5</th>
 <th>6</th>
+<th>下校</th>
 </tr>
 `;
 
 const count = {};
 
-for(let day=1; day<=lastDay; day++){
+for(let day=1;day<=lastDay;day++){
 
 const date =
 new Date(year,month-1,day);
@@ -180,13 +299,31 @@ weekNames[date.getDay()];
 
 const lessons =
 timetable[week] ||
- ["","","","","",""];
+["","","","","",""];
 
-lessons.forEach(s=>{
- if(s){
-   count[s]=(count[s]||0)+1;
- }
+lessons.forEach(subject=>{
+
+if(subject){
+
+count[subject] =
+(count[subject]||0)+1;
+
+}
+
 });
+
+let dismissal = "";
+
+if(week==="水"){
+dismissal="14:30";
+}else if(
+week==="月" ||
+week==="火" ||
+week==="木" ||
+week==="金"
+){
+dismissal="15:20";
+}
 
 html += `
 <tr>
@@ -199,6 +336,7 @@ html += `
 <td>${lessons[3]}</td>
 <td>${lessons[4]}</td>
 <td>${lessons[5]}</td>
+<td>${dismissal}</td>
 </tr>
 `;
 
@@ -217,16 +355,16 @@ let hours = `
 </tr>
 `;
 
-for(const key in count){
+Object.keys(count).forEach(subject=>{
 
 hours += `
 <tr>
-<td>${key}</td>
-<td>${count[key]}</td>
+<td>${subject}</td>
+<td>${count[subject]}</td>
 </tr>
 `;
 
-}
+});
 
 hours += "</table>";
 
@@ -235,6 +373,7 @@ hours;
 
 }
 
+renderTimetableEditor();
 createTable();
 
 </script>
