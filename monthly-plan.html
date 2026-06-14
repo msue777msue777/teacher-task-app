@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月案メーカー</title>
+
+<style>
+
+body{
+    font-family:sans-serif;
+    background:#f5f7fa;
+    margin:0;
+}
+
+header{
+    background:#2563eb;
+    color:white;
+    text-align:center;
+    padding:20px;
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+    padding:20px;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:15px;
+    margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+input,select{
+    padding:6px;
+    margin:3px;
+}
+
+button{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:10px 15px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+}
+
+th,td{
+    border:1px solid #ccc;
+    padding:4px;
+    text-align:center;
+}
+
+.event{
+    width:150px;
+}
+
+.back{
+    display:inline-block;
+    margin-bottom:10px;
+    text-decoration:none;
+    color:#2563eb;
+    font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>月案メーカー</h1>
+</header>
+
+<div class="container">
+
+<a href="top.html" class="back">← トップへ戻る</a>
+
+<div class="card">
+
+<h2>基本設定</h2>
+
+学年
+<select id="grade">
+<option>4年</option>
+<option selected>5年</option>
+<option>6年</option>
+</select>
+
+担任
+<input id="teacher">
+
+年
+<input id="year" type="number" value="2026" style="width:80px;">
+
+月
+<input id="month" type="number" value="6" style="width:60px;">
+
+<button onclick="createTable()">
+月案作成
+</button>
+
+</div>
+
+<div class="card">
+
+<h2>児童配布用 学習予定表</h2>
+
+<div id="tableArea"></div>
+
+</div>
+
+<div class="card">
+
+<h2>時数集計</h2>
+
+<div id="hoursArea"></div>
+
+</div>
+
+</div>
+
+<script>
+
+const timetable = {
+"月":["国語","算数","理科","社会","体育",""],
+"火":["算数","国語","音楽","体育","総合",""],
+"水":["国語","算数","理科","社会","",""],
+"木":["算数","国語","図工","社会","総合",""],
+"金":["国語","算数","理科","学活","体育",""]
+};
+
+function createTable(){
+
+const year =
+Number(document.getElementById("year").value);
+
+const month =
+Number(document.getElementById("month").value);
+
+const lastDay =
+new Date(year,month,0).getDate();
+
+const weekNames =
+["日","月","火","水","木","金","土"];
+
+let html = `
+<table>
+<tr>
+<th>日</th>
+<th>曜</th>
+<th>学校行事など</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+</tr>
+`;
+
+const count = {};
+
+for(let day=1; day<=lastDay; day++){
+
+const date =
+new Date(year,month-1,day);
+
+const week =
+weekNames[date.getDay()];
+
+const lessons =
+timetable[week] ||
+ ["","","","","",""];
+
+lessons.forEach(s=>{
+ if(s){
+   count[s]=(count[s]||0)+1;
+ }
+});
+
+html += `
+<tr>
+<td>${day}</td>
+<td>${week}</td>
+<td><input class="event"></td>
+<td>${lessons[0]}</td>
+<td>${lessons[1]}</td>
+<td>${lessons[2]}</td>
+<td>${lessons[3]}</td>
+<td>${lessons[4]}</td>
+<td>${lessons[5]}</td>
+</tr>
+`;
+
+}
+
+html += "</table>";
+
+document.getElementById("tableArea").innerHTML =
+html;
+
+let hours = `
+<table>
+<tr>
+<th>教科</th>
+<th>時数</th>
+</tr>
+`;
+
+for(const key in count){
+
+hours += `
+<tr>
+<td>${key}</td>
+<td>${count[key]}</td>
+</tr>
+`;
+
+}
+
+hours += "</table>";
+
+document.getElementById("hoursArea").innerHTML =
+hours;
+
+}
+
+createTable();
+
+</script>
+
+</body>
+</html>
